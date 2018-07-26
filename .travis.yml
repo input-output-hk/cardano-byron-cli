@@ -1,0 +1,127 @@
+# Based on the "trust" template v0.1.2
+# https://github.com/japaric/trust/tree/v0.1.2
+
+dist: trusty
+language: rust
+services: docker
+sudo: required
+
+# TODO Rust builds on stable by default, this can be
+# overridden on a case by case basis down below.
+
+env:
+  global:
+    - CRATE_NAME=ccli
+
+matrix:
+  include:
+    # Android
+    - env: TARGET=aarch64-linux-android DISABLE_TESTS=1
+    - env: TARGET=arm-linux-androideabi DISABLE_TESTS=1
+    - env: TARGET=armv7-linux-androideabi DISABLE_TESTS=1
+    - env: TARGET=i686-linux-android DISABLE_TESTS=1
+    - env: TARGET=x86_64-linux-android DISABLE_TESTS=1
+
+    # iOS
+    #- env: TARGET=aarch64-apple-ios DISABLE_TESTS=1
+    #  os: osx
+    #- env: TARGET=armv7-apple-ios DISABLE_TESTS=1
+    #  os: osx
+    #- env: TARGET=armv7s-apple-ios DISABLE_TESTS=1
+    #  os: osx
+    #- env: TARGET=i386-apple-ios DISABLE_TESTS=1
+    #  os: osx
+    #- env: TARGET=x86_64-apple-ios DISABLE_TESTS=1
+    #  os: osx
+
+    # Linux
+    - env: TARGET=aarch64-unknown-linux-gnu
+    - env: TARGET=arm-unknown-linux-gnueabi
+    - env: TARGET=armv7-unknown-linux-gnueabihf
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=i686-unknown-linux-musl
+      #- env: TARGET=mips-unknown-linux-gnu
+      #- env: TARGET=mips64-unknown-linux-gnuabi64
+      #- env: TARGET=mips64el-unknown-linux-gnuabi64
+      #- env: TARGET=mipsel-unknown-linux-gnu
+      #- env: TARGET=powerpc-unknown-linux-gnu
+      #- env: TARGET=powerpc64-unknown-linux-gnu
+      #- env: TARGET=powerpc64le-unknown-linux-gnu
+      #- env: TARGET=s390x-unknown-linux-gnu DISABLE_TESTS=1
+    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-musl
+
+    # OSX
+    - env: TARGET=i686-apple-darwin
+      os: osx
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+
+    # *BSD
+    - env: TARGET=i686-unknown-freebsd DISABLE_TESTS=1
+    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
+      #- env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
+
+    # Windows
+    #- env: TARGET=x86_64-pc-windows-gnu
+
+    # Bare metal
+    # These targets don't support std and as such are likely not suitable for
+    # most crates.
+    # - env: TARGET=thumbv6m-none-eabi
+    # - env: TARGET=thumbv7em-none-eabi
+    # - env: TARGET=thumbv7em-none-eabihf
+    # - env: TARGET=thumbv7m-none-eabi
+
+    # Testing other channels
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: nightly
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+      rust: nightly
+
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - sh .ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash .ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh .ci/before_deploy.sh
+
+deploy:
+  # - Create a `public_repo` GitHub token. Go to: https://github.com/settings/tokens/new
+  # - Encrypt it: `travis encrypt 0123456789012345678901234567890123456789
+  # - Paste the output down here
+  api_key:
+    secure: qGOFfT4BRPOpE3kgxHiGe+KUYc6GnhE0OSw09gwyaofbUuLUnXipZyJQywJydVduHlb0vlGcCLoRhemL+faugZTQw+ge0T3Y+rn/1J7aXyEKOZVvMG6QDEswuLdOJHJQHMbsAp71xV2rv8wC/c8U98buCQhz0B1TarGpdJqVFDl/MeY2ywExzKbU8Rw3zf6+koyUciJoybeF4f0uKwpqydnZ0ko4RAdfCzQgDKOvtpQ6K0eFHlHPUvQgu0m0+Anmz4Gw2FYf5hRsO4WBobox4Nve0w1iX7XFy3+yY22i9D/oQMU/8RVIAv3gwH/TClxknUR4N0RFTuwVLE6KMhHEK+NApiMOw4fr65OICViReWl744JrUQoSsxjegAR909r0UpnYPiCOCpqe5m9uwvms3JX1vIXbpoVc/ndLasMQSMBRwAYSivBsY2lguJnZRYoR9xmkXWz3ldu2PYQsgqZtSstfCrx4LStCx7MHwSs2UuwBelVEuawz2JrEp0utxLPLbIs+1zbRii0B0i8dCNSBY/vcB6KysTtMDjauIL2FSqz45cnzJHLt3h5sb+AmINOeaU0ut+fkU3P8c69+yd3eOMczMqswdT0YOx63bMj5ugkgHI+HbVcZHvlCMVHTyngzJbMlOhmchy35yxPp44c26fgWpKpZMF0+qWVXeMIiQJ4=
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    # only stable rust version will create binary releases
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
