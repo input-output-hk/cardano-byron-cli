@@ -17,11 +17,11 @@ serde_derive = "1.0"
 serde_yaml = "0.8"
 env_logger = "0.5"
 humantime = "1.1"
-cbor_event = { path = "../cbor_event" }
-cryptoxide = { path = "../cryptoxide" }
-cardano = { path = "../cardano" }
-exe-common = { path = "../exe-common" }
-storage = { path = "../storage" }
+cbor_event = { path = "cardano-deps/cbor_event" }
+cryptoxide = { path = "cardano-deps/cryptoxide" }
+cardano    = { path = "cardano-deps/cardano" }
+exe-common = { path = "cardano-deps/exe-common" }
+storage    = { path = "cardano-deps/storage" }
 
 [dependencies.clap]
 version = "2.32"
