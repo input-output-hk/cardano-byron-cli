@@ -1,9 +1,21 @@
 [package]
 name = "cardano-cli"
-version = "0.1.0"
+version = "0.0.1"
 authors = [ "Nicolas Di Prima <nicolas.diprima@iohk.io>"
           , "Vincent Hanquez <vincent.hanquez@iohk.io>"
           ]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/input-output-hk/cardano-cli"
+homepage = "https://github.com/input-output-hk/cardano-cli#README.md"
+documentation = "https://github.com/input-output-hk/cardano-cli#USAGE.md"
+description = """
+The Cardano command line interface:
+
+* powerful blockchain manager: download, explore, verify, analyse;
+* manage multiple wallets: daedalus', icarus' or other kind of wallets;
+* flexible transaction build engine.
+"""
+
 
 [dependencies]
 console = "0.6.1"
