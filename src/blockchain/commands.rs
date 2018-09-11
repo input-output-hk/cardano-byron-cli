@@ -449,6 +449,12 @@ pub fn verify_chain( mut term: Term
 {
     let blockchain = Blockchain::load(root_dir, name);
 
+    let tip = blockchain.load_tip().0;
+    let num_blocks = tip.date.slot_number();
+
+    let progress = term.progress_bar(num_blocks as u64);
+    progress.set_message("verifying blocks... ");
+
     let mut bad_blocks = 0;
     let mut nr_blocks = 0;
     let mut chain_state = cardano::block::ChainState::new(&blockchain.config.genesis_prev);
@@ -459,17 +465,18 @@ pub fn verify_chain( mut term: Term
         let rblk = rblk.unwrap();
         let blk = rblk.decode().unwrap();
         let hash = blk.get_header().compute_hash();
-        //writeln!(term, "block {} {}", hash, blk.get_header().get_blockdate()).unwrap();
         match cardano::block::verify_block_in_chain(blockchain.config.protocol_magic, &mut chain_state, &hash, &blk) {
             Ok(()) => {},
             Err(err) => {
                 bad_blocks += 1;
                 term.error(&format!("Block {} ({}) is invalid: {:?}", hash, blk.get_header().get_blockdate(), err)).unwrap();
                 term.simply("\n").unwrap();
-                //::std::process::exit(1);
             }
         }
+        progress.inc(1);
     }
+
+    progress.finish();
 
     if bad_blocks > 0 {
         term.error(&format!("{} out of {} blocks are invalid", bad_blocks, nr_blocks)).unwrap();
