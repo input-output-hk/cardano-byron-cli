@@ -18,7 +18,7 @@ The Cardano command line interface:
 
 
 [dependencies]
-console = "0.6.1"
+console = "0.6.2"
 dialoguer = { git = "https://github.com/primetype/dialoguer", rev = "bcd067b454bfc03b2a3dc5d4be314c9852265fac" }
 indicatif = "0.9"
 log = "0.4"
