@@ -70,8 +70,6 @@ $ cardano-cli wallet status "My Wallet"
 
 | Rust    | `test` |
 |---------|:------:|
-| v1.30   |   ✓    |
-| ...     |   ✓    |
 | stable  |   ✓    |
 | beta    |   ✓    |
 | nightly |   ✓    |
