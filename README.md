@@ -1,5 +1,11 @@
 # cardano-cli
 
+[![Build Status](https://travis-ci.org/input-output-hk/cardano-cli.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-cli)
+![MIT or APACHE-2 licensed](https://img.shields.io/badge/licensed-MIT%20or%20APACHE--2-blue.svg)
+![Cardano Mainnet](https://img.shields.io/badge/Cardano%20Ada-mainnet-brightgreen.svg)
+![Cardano Staging](https://img.shields.io/badge/Cardano%20Ada-staging-brightgreen.svg)
+![Cardano Staging](https://img.shields.io/badge/Cardano%20Ada-testnet-orange.svg)
+
 The [Cardano](https://www.cardano.org) command line interface:
 
 * powerful blockchain manager: download, explore, verify, analyse;
@@ -42,6 +48,36 @@ $ cardano-cli wallet status "My Wallet"
 ### Complete documentation
 
 [Command line documentation](./USAGE.md)
+
+# Supported platforms
+
+| Target                               | `test` |
+|--------------------------------------|:------:|
+| `aarch64-unknown-linux-gnu`          |   ✓    |
+| `arm-unknown-linux-gnueabi`          |   ✓    |
+| `armv7-unknown-linux-gnueabihf`      |   ✓    |
+| `i686-unknown-linux-gnu`             |   ✓    |
+| `i686-unknown-linux-musl`            |   ✓    |
+| `x86_64-unknown-linux-gnu`           |   ✓    |
+| `x86_64-unknown-linux-musl`          |   ✓    |
+| `i686-apple-darwin`                  |   ✓    |
+| `x86_64-apple-darwin`                |   ✓    |
+| `x86_64-apple-darwin`                |   ✓    |
+| `i686-unknown-freebsd`               |   ✓    |
+| `x86_64-unknown-freebsd`             |   ✘    |
+
+# Supported compiler versions
+
+| Rust    | `test` |
+|---------|:------:|
+| v1.30   |   ✓    |
+| ...     |   ✓    |
+| stable  |   ✓    |
+| beta    |   ✓    |
+| nightly |   ✓    |
+
+We aim to support compiler versions down to 1.30. This is not a contract though.
+We might drop support of older compiler with time at our own convenience.
 
 # License
 
