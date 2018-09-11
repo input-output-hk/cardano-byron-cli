@@ -75,6 +75,10 @@ matrix:
 
     # Testing other channels
     - env: TARGET=x86_64-unknown-linux-gnu
+      rust: 1.30
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: beta
+    - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly
     - env: TARGET=x86_64-apple-darwin
       os: osx
