@@ -64,7 +64,7 @@ $ cardano-cli wallet status "My Wallet"
 | `x86_64-apple-darwin`                |   ✓    |
 | `x86_64-apple-darwin`                |   ✓    |
 | `i686-unknown-freebsd`               |   ✓    |
-| `x86_64-unknown-freebsd`             |   ✘    |
+| `x86_64-unknown-freebsd`             |   [✘](https://github.com/input-output-hk/cardano-cli/issues/9)    |
 
 # Supported compiler versions
 
