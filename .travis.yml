@@ -59,7 +59,7 @@ matrix:
 
     # *BSD
     - env: TARGET=i686-unknown-freebsd DISABLE_TESTS=1
-    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1 # allowed to fail, See issue: https://github.com/input-output-hk/cardano-cli/issues/9
+    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
       #- env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
 
     # Windows
@@ -81,8 +81,6 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
       rust: nightly
-  allow_failures:
-    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1 # See issue: https://github.com/input-output-hk/cardano-cli/issues/9
 
 before_install:
   - set -e
