@@ -17,13 +17,11 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
-    # TODO Update this to build the artifacts that matter to you
-    cross rustc --bin hello_world --target $TARGET --release -- -C lto
+    cross rustc --bin ${CRATE_NAME} --target $TARGET --release -- -C lto
 
-    # TODO Update this to package the right artifacts
     echo $TRAVIS_OS_NAME
     ls target/$TARGET/release/
-    cp target/$TARGET/release/ccli $stage/
+    cp target/$TARGET/release/${CRATE_NAME} $stage/
 
     cd $stage
     tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *

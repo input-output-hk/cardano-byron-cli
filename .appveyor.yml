@@ -4,7 +4,7 @@
 environment:
   global:
     RUST_VERSION: stable
-    CRATE_NAME: ccli
+    CRATE_NAME: cardano-cli
 
   matrix:
     # MinGW
@@ -46,7 +46,7 @@ test_script:
     )
 
 before_deploy:
-  - cargo rustc --target %TARGET% --release --bin hello_world -- -C lto
+  - cargo rustc --target %TARGET% --release --bin cardano-cli -- -C lto
   - ps: .ci\before_deploy.ps1
 
 deploy:
