@@ -15,6 +15,19 @@ The [Cardano](https://www.cardano.org) command line interface:
 This command line interface is built upon the
 [**Rust Cardano SDK**](https://github.com/input-output-hk/rust-cardano).
 
+## Warning
+
+* The software is currently still in alpha phase, please don't use for
+  any other purpose than debugging and testing, until stable releases.
+* While most of the operations in the CLI is reading state, and are thus
+  relatively safe even in the precense of bugs, do take special note that
+  `transaction send` will permanently change your state.
+* Consider to test testnet operations (depending on testnet availability)
+  before doing mainnet operations.
+* If you think, something is suspicious, it may very well be the case.
+  Check the documentation, or ask for help.
+* Do not share your wallet mnemonics, passwords, cryptographic material, pending signatures.
+
 ## Installation guide
 
 While it is recommended to wait for official releases, it is also possible
