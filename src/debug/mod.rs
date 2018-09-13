@@ -1,4 +1,4 @@
-use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex}};
+use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}};
 
 use utils::term::Term;
 
@@ -15,7 +15,7 @@ pub fn command_address( mut term: Term
         Ok(bytes) => bytes,
     };
 
-    let address = match ExtendedAddr::from_bytes(&bytes) {
+    let address = match ExtendedAddr::try_from_slice(&bytes) {
         Err(err) => {
             term.error(&format!("Invalid Address\n")).unwrap();
             term.error(&format!("{:?}\n", err)).unwrap();
