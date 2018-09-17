@@ -36,7 +36,7 @@ to build the executable yourself:
 1. [install rust toolchain](;https://www.rust-lang.org/en-US/install.html);
 2. clone the project repository (with the dependencies)
    ```sh
-   git clone git@git@github.com:input-output-hk/cardano-cli.git
+   git clone https://github.com/input-output-hk/cardano-cli.git --recursive
    ```
 3. build and install the binary:
    ```sh
