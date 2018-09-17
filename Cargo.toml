@@ -31,7 +31,6 @@ env_logger = "0.5"
 humantime = "1.1"
 cbor_event = { path = "cardano-deps/cbor_event" }
 cryptoxide = { path = "cardano-deps/cryptoxide" }
-cardano    = { path = "cardano-deps/cardano" }
 exe-common = { path = "cardano-deps/exe-common" }
 storage    = { path = "cardano-deps/storage" }
 
@@ -39,3 +38,7 @@ storage    = { path = "cardano-deps/storage" }
 version = "2.32"
 default-features = false
 features = [ "suggestions", "color", "wrap_help" ]
+
+[dependencies.cardano]
+path = "cardano-deps/cardano"
+features = [ "generic-serialization" ]

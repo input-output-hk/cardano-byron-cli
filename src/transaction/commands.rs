@@ -391,10 +391,10 @@ pub fn input_select( mut term: Term
                    , wallets: Vec<WalletName>
                    )
 {
-    use ::cardano::{fee::{self, SelectionAlgorithm}, txutils};
+    use ::cardano::{fee::{self}, input_selection::{SelectionAlgorithm, SelectionPolicy}, txutils};
 
     let alg = fee::LinearFee::default();
-    let selection_policy = fee::SelectionPolicy::default();
+    let selection_policy = SelectionPolicy::default();
 
     let mut staging = load_staging(&mut term, root_dir.clone(), id_str);
 

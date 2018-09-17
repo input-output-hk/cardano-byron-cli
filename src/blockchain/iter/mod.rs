@@ -80,19 +80,19 @@ pub struct Iter<'a> {
 }
 impl<'a> Iter<'a> {
     pub fn new(storage: &'a Storage, from: HeaderHash, to: HeaderHash) -> Result<Self> {
-        let iterator = match storage::block_location(&storage, from.bytes()) {
+        let iterator = match storage::block_location(&storage, &from) {
             None => panic!(),
             Some(storage::BlockLocation::Loose) => {
                 let mut range = storage::block::Range::new(
                     storage,
-                    from.bytes().clone(),
-                    to.bytes().clone()
+                    *from.clone(),
+                    *to.clone()
                 ).unwrap(); // TODO
                 range.next();
                 IteratorType::Loose(storage, range)
             },
             Some(location) => {
-                let block_header = storage::block_read_location(&storage, &location, from.bytes()).unwrap().decode()?.get_header();
+                let block_header = storage::block_read_location(&storage, &location, &from).unwrap().decode()?.get_header();
                 let block_date = block_header.get_blockdate();
 
                 let epochs = epoch::Epochs::new(&storage.config).from_epoch(block_date.get_epochid());
@@ -146,8 +146,8 @@ impl<'a> Iterator for Iter<'a> {
                     if ! self.iterator.is_loose() {
                         let mut range = storage::block::Range::new(
                             &self.storage,
-                            self.last_known_block_hash.clone().unwrap().into_bytes(),
-                            self.ending_at.bytes().clone()
+                            *self.last_known_block_hash.clone().unwrap(),
+                            *self.ending_at.clone()
                         ).unwrap(); // TODO
                         range.next(); // remove the last known block hash (it was the one in the last epoch)
                         self.iterator = IteratorType::Loose(&self.storage, range);
