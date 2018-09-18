@@ -457,13 +457,15 @@ pub fn verify_chain( mut term: Term
 
     let mut bad_blocks = 0;
     let mut nr_blocks = 0;
-    let mut chain_state = cardano::block::ChainState::new(&blockchain.config.genesis_prev);
+    let mut chain_state = cardano::block::ChainState::new(
+        &blockchain.config.genesis_prev,
+        blockchain.config.protocol_magic);
 
     for res in blockchain.iter_to_tip(blockchain.config.genesis.clone()).unwrap() {
         let (rblk, blk) = res.unwrap();
         nr_blocks += 1;
         let hash = blk.get_header().compute_hash();
-        match cardano::block::verify_block_in_chain(blockchain.config.protocol_magic, &mut chain_state, &hash, &blk) {
+        match chain_state.verify_block(&hash, &blk) {
             Ok(()) => {},
             Err(err) => {
                 bad_blocks += 1;
