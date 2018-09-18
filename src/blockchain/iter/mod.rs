@@ -4,7 +4,7 @@ pub mod epoch;
 pub use self::error::{Error, Result};
 
 use cardano::block::{RawBlock, HeaderHash};
-use storage::{self, Storage};
+use cardano_storage::{self as storage, Storage};
 
 enum IteratorType<'a> {
     Epoch(epoch::Epochs<'a>, Option<epoch::Iter>),

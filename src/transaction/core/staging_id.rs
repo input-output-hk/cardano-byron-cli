@@ -1,5 +1,5 @@
 use rand;
-use storage::utils::serialize::{SIZE_SIZE, read_size, write_size};
+use storage_units::utils::serialize::{SIZE_SIZE, read_size, write_size};
 use cardano::util::{base58};
 use std::{str, fmt};
 use serde::{ser, de};

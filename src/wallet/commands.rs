@@ -370,7 +370,7 @@ pub fn address( mut term: Term
         },
         HDWalletModel::RandomIndex2Levels => {
             let lookup_struct = load_randomindex_lookup_structure(&mut term, &wallet);
-            let addressing = ::cardano::wallet::rindex::Addressing(account, index);
+            let addressing = ::cardano::wallet::rindex::Addressing::new(account, index);
             lookup_struct.get_address(&addressing)
         }
     };

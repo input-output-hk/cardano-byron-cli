@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::io::{Write};
 
 use exe_common::config::net::Config;
-use storage;
+use cardano_storage as storage;
 
 use utils::term::Term;
 
@@ -257,7 +257,7 @@ pub fn forward( mut term: Term
     let hash = if let Some(hash_hex) = to {
         let hash = super::config::parse_block_hash(&mut term, &hash_hex);
 
-        if ::storage::block_location(&blockchain.storage, &hash).is_none() {
+        if storage::block_location(&blockchain.storage, &hash).is_none() {
             term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_hex)).unwrap();
             ::std::process::exit(1);
         }
@@ -306,7 +306,7 @@ pub fn pull( mut term: Term
 fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> RawBlock
 {
     let hash = super::config::parse_block_hash(&mut term, &hash_str);
-    let block_location = match ::storage::block_location(&blockchain.storage, &hash) {
+    let block_location = match storage::block_location(&blockchain.storage, &hash) {
         None => {
             term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_str)).unwrap();
             ::std::process::exit(1);
@@ -316,7 +316,7 @@ fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> Ra
 
     debug!("blk location: {:?}", block_location);
 
-    match ::storage::block_read_location(&blockchain.storage, &block_location, &hash) {
+    match storage::block_read_location(&blockchain.storage, &block_location, &hash) {
         None        => {
             // this is a bug, we have a block location available for this hash
             // but we were not able to read the block.

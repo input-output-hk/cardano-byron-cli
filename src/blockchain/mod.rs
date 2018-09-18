@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use exe_common::network::api::BlockRef;
 pub use exe_common::{config::net::{self, Config, Peer, Peers}, network};
-use storage::{tag, Storage, config::{StorageConfig}};
+use cardano_storage::{self as storage, tag, Storage, config::{StorageConfig}};
 use cardano::block;
 
 pub const LOCAL_BLOCKCHAIN_TIP_TAG : &'static str = "tip";
@@ -119,7 +119,7 @@ impl Blockchain {
             date: block::BlockDate::Genesis(self.config.epoch_start)
         }, true);
         match self.storage.get_block_from_tag(LOCAL_BLOCKCHAIN_TIP_TAG) {
-            Err(::storage::Error::NoSuchTag) => genesis_ref,
+            Err(storage::Error::NoSuchTag) => genesis_ref,
             Err(err) => panic!(err),
             Ok(block) => {
                 let header = block.get_header();
