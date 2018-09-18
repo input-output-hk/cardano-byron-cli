@@ -3,7 +3,8 @@ use exe_common;
 use exe_common::network::{api::Api, api::BlockRef};
 use cardano::{block::{BlockDate, EpochId, HeaderHash}, tx::{TxAux}};
 use utils::term::Term;
-use storage::{self, tag};
+use cardano_storage::{self as storage, tag};
+use storage_units::packfile;
 use std::ops::Deref;
 use std::time::SystemTime;
 use std::mem;
@@ -100,7 +101,7 @@ impl<'a> ConnectedPeer<'a> {
             };
         info!("First unstable epoch : {}", first_unstable_epoch);
 
-        let mut cur_epoch_state : Option<(EpochId, storage::containers::packfile::Writer, SystemTime)> = None;
+        let mut cur_epoch_state : Option<(EpochId, packfile::Writer, SystemTime)> = None;
 
         let mut last_block : Option<HeaderHash> = None;
 
@@ -299,7 +300,8 @@ impl<'a> Peer<'a> {
 }
 
 mod internal {
-    use storage::{self, block_read};
+    use cardano_storage::{self as storage, block_read};
+    use storage_units::packfile;
     use cardano::block::{EpochId, HeaderHash};
     use cardano::util::{hex};
     use std::time::{SystemTime, Duration};
@@ -338,7 +340,7 @@ mod internal {
     pub fn append_blocks_to_epoch_reverse(
         storage: &storage::Storage,
         epoch_id : EpochId,
-        writer : &mut storage::containers::packfile::Writer,
+        writer : &mut packfile::Writer,
         last_block: &HeaderHash)
         -> HeaderHash
     {
@@ -361,7 +363,7 @@ mod internal {
         cur_hash
     }
 
-    pub fn finish_epoch(storage: &storage::Storage, epoch_id : EpochId, writer : storage::containers::packfile::Writer, epoch_time_start : &SystemTime)
+    pub fn finish_epoch(storage: &storage::Storage, epoch_id : EpochId, writer : packfile::Writer, epoch_time_start : &SystemTime)
     {
         let (packhash, index) = storage::pack::packwriter_finalize(&storage.config, writer);
         let (_, tmpfile) = storage::pack::create_index(&storage, &index);

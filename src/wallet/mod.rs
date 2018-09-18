@@ -15,7 +15,7 @@ use self::state::log::{LogLock, LogWriter};
 
 use std::{fmt, path::PathBuf, fs, io::{Read, Write}, collections::{BTreeMap}};
 use cardano::{wallet, hdwallet::{XPub, XPUB_SIZE}};
-use storage::utils::{tmpfile::{TmpFile}};
+use storage_units::utils::{tmpfile::{TmpFile}};
 use serde_yaml;
 
 use utils::password_encrypted::{Password};
