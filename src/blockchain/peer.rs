@@ -29,7 +29,7 @@ impl<'a> ConnectedPeer<'a> {
     }
 
     pub fn send_txaux(mut self, txaux: TxAux) {
-        let sent = self.connection.send_transaction(txaux).unwrap();
+        let _sent = self.connection.send_transaction(txaux).unwrap();
     }
 
     pub fn sync(mut self, term: &mut Term) -> Peer<'a> {
