@@ -3,7 +3,7 @@ use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
 use super::super::blockchain::{Blockchain};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
-use cardano::{tx::{TxId, TxIn, TxInWitness}, coin::{Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
+use cardano::{tx::{TxId, TxoPointer, TxInWitness}, coin::{Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
 use cardano::tx;
 
 /// function to create a new empty transaction
@@ -277,7 +277,7 @@ pub fn remove_input( mut term: Term
     }
 
     let txin = if let Some(input) = input {
-        TxIn {
+        TxoPointer {
             id: input.0,
             index: input.1
         }
@@ -466,7 +466,7 @@ fn load_staging(term: &mut Term, root_dir: PathBuf, id_str: &str) -> StagingTran
 // ----------------------------------- helpers ---------------------------------
 
 fn find_input_in_all_utxos(term: &mut Term, root_dir: PathBuf, txid: TxId, index: u32) -> core::Input {
-    let txin = TxIn { id: txid, index: index };
+    let txin = TxoPointer { id: txid, index: index };
     for (_, wallet) in Wallets::load(root_dir.clone()).unwrap() {
         let state = wallet::utils::create_wallet_state_from_logs(term, &wallet, root_dir.clone(), wallet::state::lookup::accum::Accum::default());
 

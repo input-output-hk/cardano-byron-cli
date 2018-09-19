@@ -1,4 +1,4 @@
-use cardano::{coin::{Coin}, tx::{TxIn, TxId, TxOut}, address::{ExtendedAddr}};
+use cardano::{coin::{Coin}, tx::{TxoPointer, TxId, TxOut}, address::{ExtendedAddr}};
 use std::{fmt, collections::{BTreeMap}};
 
 /// Unspent Transaction Output (aka. UTxO). This is a transaction
@@ -39,8 +39,8 @@ impl<A> UTxO<A> {
     /// extract the `TxIn` from the `UTxO`. The output `TxIn` is meant to
     /// be used in a new transaction, and to spend the fund credited
     /// by this `UTxO`
-    pub fn extract_txin(&self) -> TxIn {
-        TxIn {
+    pub fn extract_txin(&self) -> TxoPointer {
+        TxoPointer {
             id: self.transaction_id,
             index: self.index_in_transaction
         }
@@ -80,4 +80,4 @@ impl<A: fmt::Display> fmt::Display for UTxO<A> {
 }
 
 /// collections for quick lookup of `UTxO` by `TxId`
-pub type UTxOs<A> = BTreeMap<TxIn, UTxO<A>>;
+pub type UTxOs<A> = BTreeMap<TxoPointer, UTxO<A>>;

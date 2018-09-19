@@ -1,5 +1,5 @@
 use super::{Operation, Input, Output, Change};
-use cardano::{tx::{Tx, TxIn, TxWitness, TxInWitness, TxAux}, address::{ExtendedAddr}};
+use cardano::{tx::{Tx, TxoPointer, TxWitness, TxInWitness, TxAux}, address::{ExtendedAddr}};
 
 /// describe a transaction in its most reduce representation
 ///
@@ -98,12 +98,12 @@ impl Transaction {
         debug!("removing outputs {:#?}", output);
     }
 
-    /// lookup the inputs for the given `TxIn`
-    pub fn lookup_input(&self, txin: TxIn) -> Option<usize> {
+    /// lookup the inputs for the given `TxoPointer`
+    pub fn lookup_input(&self, txin: TxoPointer) -> Option<usize> {
         self.inputs().iter().position(|input| &input.extract_txin() == &txin)
     }
 
-    fn remove_input(&mut self, txin: TxIn) {
+    fn remove_input(&mut self, txin: TxoPointer) {
         // Here we could have used Drain Filter, but the feature is still not stable.
         // [see rust lang's issue #43244](https://github.com/rust-lang/rust/issues/43244).
         //
