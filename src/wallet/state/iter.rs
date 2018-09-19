@@ -34,9 +34,9 @@ impl<'a> TransactionIterator<'a> {
     fn skip_no_transactions(&mut self) -> blockchain::iter::Result<()> {
         self.current_tx = None;
         loop {
-            if let Some(raw_block) = self.block_iterator.next() {
+            if let Some(res) = self.block_iterator.next() {
                 self.progress.inc(1);
-                let block = raw_block?.decode()?;
+                let (_, block) = res?;
                 if block.has_transactions() {
                     self.current_tx = Some((block, 0));
                     break;

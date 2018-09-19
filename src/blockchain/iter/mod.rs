@@ -3,7 +3,7 @@ pub mod epoch;
 
 pub use self::error::{Error, Result};
 
-use cardano::block::{RawBlock, HeaderHash};
+use cardano::block::{Block, RawBlock, HeaderHash};
 use cardano_storage::{self as storage, Storage};
 
 enum IteratorType<'a> {
@@ -115,7 +115,7 @@ impl<'a> Iter<'a> {
     }
 }
 impl<'a> Iterator for Iter<'a> {
-    type Item = Result<RawBlock>;
+    type Item = Result<(RawBlock, Block)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(ref hh) = self.last_known_block_hash {
@@ -130,9 +130,10 @@ impl<'a> Iterator for Iter<'a> {
                 match block {
                     Err(err) => return Some(Err(err)),
                     Ok(raw_block) => {
-                        let hh = raw_block.decode().unwrap().get_header().compute_hash();
+                        let block = raw_block.decode().unwrap();
+                        let hh = block.get_header().compute_hash();
                         let end = &hh == &self.starting_from;
-                        next = Some(Ok(raw_block));
+                        next = Some(Ok((raw_block, block)));
                         self.last_known_block_hash = Some(hh);
                         if end { break; }
                     }
@@ -158,9 +159,10 @@ impl<'a> Iterator for Iter<'a> {
                 },
                 Some(Err(err)) => Some(Err(err)),
                 Some(Ok(raw_block)) => {
-                    let hh = raw_block.decode().unwrap().get_header().compute_hash();
+                    let block = raw_block.decode().unwrap();
+                    let hh = block.get_header().compute_hash();
                     self.last_known_block_hash = Some(hh);
-                    Some(Ok(raw_block))
+                    Some(Ok((raw_block, block)))
                 }
             }
         }
