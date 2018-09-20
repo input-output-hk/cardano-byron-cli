@@ -16,13 +16,13 @@ pub fn list( mut term: Term
            , detailed: bool
            )
 {
-    let wallets = Wallets::load(root_dir.clone()).unwrap();
+    let wallets = Wallets::load(root_dir.clone()).unwrap_or_else(|e| term.fail_with(e));
     for (_, wallet) in wallets {
         let detail = if detailed {
             if let Some(blk_name) = &wallet.config.attached_blockchain {
                 let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup::accum::Accum::default());
 
-                let total = state.total().unwrap();
+                let total = state.total().unwrap_or_else(|e| term.fail_with(e));
 
                 format!("\t{}\t{}@{}",
                     style!(total).green().bold(),
@@ -130,8 +130,7 @@ pub fn recover<D>( mut term: Term
     let xprv = if daedalus_seed {
         match wallet::rindex::RootKey::from_daedalus_mnemonics(derivation_scheme, &language, string.to_string()) {
             Err(err) => {
-                term.error(&format!("Invalid mnemonics: {:#?}\n", err)).unwrap();
-                ::std::process::exit(1)
+                term.fail_with(err);
             },
             Ok(root_key) => { (*root_key).clone() }
         }
@@ -188,7 +187,7 @@ new transactions will be by recovering the wallet with the mnemonic words.",
         .interact().unwrap();
     if ! confirmation { ::std::process::exit(0); }
 
-    unsafe { wallet.destroy() }.unwrap();
+    unsafe { wallet.destroy() }.unwrap_or_else(|e| term.fail_with(e));
 
     term.success("Wallet successfully destroyed.\n").unwrap()
 }
@@ -241,7 +240,7 @@ pub fn detach( mut term: Term
     );
 
     // 2. delete the wallet log
-    wallet.delete_log().unwrap();
+    wallet.delete_log().unwrap_or_else(|e| term.fail_with(e));
 
     wallet.save();
 
@@ -277,7 +276,7 @@ pub fn status( mut term: Term
 
     let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir, lookup::accum::Accum::default());
 
-    let total = state.total().unwrap();
+    let total = state.total().unwrap_or_else(|e| term.fail_with(e));
 
     term.simply(" * balance ").unwrap();
     term.success(&format!(" {}", total)).unwrap();
@@ -329,7 +328,7 @@ pub fn sync( mut term: Term
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
             let mut lookup_struct = load_bip44_lookup_structure(&mut term, &wallet);
-            lookup_struct.prepare_next_account().unwrap();
+            lookup_struct.prepare_next_account().unwrap_or_else(|e| term.fail_with(e));
             let mut state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup_struct);
 
             update_wallet_state_with_utxos(&mut term, &wallet, &blockchain, &mut state);
@@ -358,12 +357,16 @@ pub fn address( mut term: Term
         HDWalletModel::BIP44 => {
             let mut lookup_struct = load_bip44_lookup_structure(&mut term, &wallet);
             let account = match ::cardano::bip::bip44::Account::new(account) {
-                Err(err) => panic!("{:#?}", err),
+                Err(err) => term.fail_with(err),
                 Ok(account) => account
             };
-            let change = if is_internal { account.internal().unwrap() } else { account.external().unwrap() };
+            let change = if is_internal {
+                account.internal().unwrap_or_else(|e| term.fail_with(e))
+            } else {
+                account.external().unwrap_or_else(|e| term.fail_with(e))
+            };
             let addressing = match change.index(index) {
-                Err(err) => panic!("{:#?}", err),
+                Err(err) => term.fail_with(err),
                 Ok(addressing) => addressing
             };
             lookup_struct.get_address(&addressing)

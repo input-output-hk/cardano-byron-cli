@@ -1,3 +1,5 @@
+use std::{fmt, error};
+
 #[derive(Debug)]
 pub enum Error {
     IoError(::std::io::Error),
@@ -15,3 +17,22 @@ impl From<::cardano_storage::Error> for Error {
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::IoError(_)      => write!(f, "I/O Error"),
+            Error::CborError(_)    => write!(f, "Encoding error (CBOR)"),
+            Error::StorageError(_) => write!(f, "Storage error"),
+        }
+    }
+}
+impl error::Error for Error {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            Error::IoError(ref err) => Some(err),
+            Error::CborError(ref err) => Some(err),
+            Error::StorageError(ref err) => Some(err),
+        }
+    }
+}
