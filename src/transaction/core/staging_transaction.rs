@@ -1,5 +1,5 @@
 use storage_units::{append, utils::{serialize, lock::{self, Lock}}};
-use cardano::{util::{hex}, address::{ExtendedAddr}, tx::{TxInWitness, TxIn, TxAux}, config::{ProtocolMagic}};
+use cardano::{util::{hex}, address::{ExtendedAddr}, tx::{TxInWitness, TxoPointer, TxAux}, config::{ProtocolMagic}};
 use std::{path::PathBuf};
 
 use super::{config, StagingId, Operation, Transaction, Input, Output, Change};
@@ -224,13 +224,13 @@ impl StagingTransaction {
         self.append(Operation::AddOutput(output))
     }
 
-    /// remove the input associated to the given `TxIn`
+    /// remove the input associated to the given `TxoPointer`
     ///
     /// # panic
     ///
-    /// This function will panic if the TxIn does not match any inputs
+    /// This function will panic if the TxoPointer does not match any inputs
     ///
-    pub fn remove_input(&mut self, txin: TxIn) -> append::Result<()> {
+    pub fn remove_input(&mut self, txin: TxoPointer) -> append::Result<()> {
         // we can only remove existing inputs
         assert!(
             self.transaction.lookup_input(txin.clone()).is_some(),
@@ -241,11 +241,11 @@ impl StagingTransaction {
         self.append(Operation::RemoveInput(txin))
     }
 
-    /// remove the input associated to the given `TxIn`
+    /// remove the input associated to the given `TxoPointer`
     ///
     /// # panic
     ///
-    /// This function will panic if the TxIn does not match any inputs
+    /// This function will panic if the TxoPointer does not match any inputs
     ///
     pub fn remove_change(&mut self, address: ExtendedAddr) -> append::Result<()> {
         self.append(Operation::RemoveChange(address))

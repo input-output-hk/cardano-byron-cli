@@ -462,7 +462,7 @@ pub fn verify_chain( mut term: Term
         blockchain.config.protocol_magic);
 
     for res in blockchain.iter_to_tip(blockchain.config.genesis.clone()).unwrap() {
-        let (rblk, blk) = res.unwrap();
+        let (_rblk, blk) = res.unwrap();
         nr_blocks += 1;
         let hash = blk.get_header().compute_hash();
         match chain_state.verify_block(&hash, &blk) {
