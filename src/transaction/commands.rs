@@ -1,31 +1,35 @@
 use std::{path::PathBuf, io::Write, iter, collections::BTreeMap};
 use utils::term::{Term, style::{Style}};
-use super::core::{self, StagingId, StagingTransaction};
+use super::core::{self, transaction, StagingId, StagingTransaction};
 use super::super::blockchain::{Blockchain};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
 use cardano::{tx::{TxId, TxoPointer, TxInWitness}, coin::{Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
 use cardano::tx;
+use storage_units;
+
+pub enum Error {
+    IoError(::std::io::Error),
+    CannotCreateNewTransaction(storage_units::append::Error),
+}
+impl From<::std::io::Error> for Error {
+    fn from(e: ::std::io::Error) -> Self { Error::IoError(e) }
+}
 
 /// function to create a new empty transaction
 pub fn new( mut term: Term
           , root_dir: PathBuf
           , blockchain: String
           )
+    -> Result<(), Error>
 {
     let blockchain = Blockchain::load(root_dir.clone(), blockchain);
 
-    let staging = match StagingTransaction::new(root_dir, blockchain.config.protocol_magic) {
-        Err(err) => {
-            // we should not expect errors at this time, but if it happens
-            // we need to report it to the user
-            error!("Error while creating a staging transaction: {:?}", err);
-            term.error("Cannot create a new staging transaction\n").unwrap();
-            ::std::process::exit(1);
-        },
-        Ok(st) => st
-    };
+    let staging = StagingTransaction::new(root_dir, blockchain.config.protocol_magic)
+        .map_err(Error::CannotCreateNewTransaction)?;
 
-    writeln!(term, "Staging file successfully created: {}", style!(staging.id()));
+    writeln!(term, "Staging file successfully created: {}", style!(staging.id()))?;
+
+    Ok(())
 }
 
 pub fn list( mut term: Term
@@ -75,7 +79,8 @@ pub fn send( mut term: Term
     let staging = load_staging(&mut term, root_dir.clone(), id_str);
     let blockchain = Blockchain::load(root_dir.clone(), blockchain);
 
-    let txaux = staging.to_tx_aux();
+    let (finalized, changes) = staging.transaction().mk_finalized().unwrap_or_else(|e| term.fail_with(e));
+    let txaux = finalized.make_txaux().unwrap_or_else(|e| term.fail_with(e));
 
     writeln!(term, "sending transaction {}", style!(txaux.tx.id()));
 
@@ -102,7 +107,9 @@ pub fn sign( mut term: Term
         wallets.insert(name, (wallet, state));
     }
 
-    let txid = staging.to_tx_aux().tx.id();
+    let (finalized, changes) = staging.transaction().mk_finalized().unwrap_or_else(|e| term.fail_with(e));
+    let txaux = finalized.make_txaux().unwrap_or_else(|e| term.fail_with(e));
+    let txid = txaux.tx.id();
     let protocol_magic = staging.protocol_magic;
 
     // TODO: ignore already signed inputs
@@ -148,8 +155,9 @@ pub fn status( mut term: Term
     let trans = staging.transaction();
     let inputs = trans.inputs();
     let input_total = sum_coins(inputs.into_iter().map(|x| x.expected_value)).unwrap();
-    let txaux = staging.to_tx_aux();
-    let output_total = txaux.tx.get_output_total().unwrap();
+    let (finalized, changes) = staging.transaction().mk_txbuilder().unwrap_or_else(|e| term.fail_with(e));
+    let tx = finalized.make_tx().unwrap_or_else(|e| term.fail_with(e));
+    let output_total = tx.get_output_total().unwrap();
     let difference = {
         let i : u64 = input_total.into();
         let o : u64 = output_total.into();
@@ -158,19 +166,24 @@ pub fn status( mut term: Term
 
     let fee_alg = LinearFee::default();
     let fake_witnesses : Vec<TxInWitness> = iter::repeat(TxInWitness::fake()).take(inputs.len()).collect();
-    let fee = fee_alg.calculate_for_txaux_component(&txaux.tx, &fake_witnesses).unwrap();
+    let fee = fee_alg.calculate_for_txaux_component(&tx, &fake_witnesses).unwrap();
 
-    let txbytes_length = tx::txaux_serialize_size(&txaux.tx, &fake_witnesses);
+    let txbytes_length = tx::txaux_serialize_size(&tx, &fake_witnesses);
 
-    println!("input-total: {}", input_total);
-    println!("output-total: {}", output_total);
-    println!("actual-fee: {}", difference);
-    println!("fee: {}", fee.to_coin());
-    println!("tx-bytes: {}", txbytes_length);
+    writeln!(term, "input-total: {}", input_total);
+    writeln!(term, "output-total: {}", output_total);
+    writeln!(term, "actual fee: {}", difference);
+    writeln!(term, "fee: {}", fee.to_coin());
+    writeln!(term, "tx-bytes: {}", txbytes_length);
 
-    let export = staging.export();
-
-    ::serde_yaml::to_writer(&mut term, &export).unwrap();
+    writeln!(term, "inputs:");
+    for input in tx.inputs.iter() {
+        writeln!(term, "  {}.{}", style!(input.id), style!(input.index));
+    }
+    writeln!(term, "outputs:");
+    for output in tx.outputs.iter() {
+        writeln!(term, "  {} {}", style!(&output.address), style!(output.value));
+    }
 }
 
 pub fn add_input( mut term: Term
@@ -180,11 +193,6 @@ pub fn add_input( mut term: Term
                 )
 {
     let mut staging = load_staging(&mut term, root_dir.clone(), id_str);
-
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
 
     let input = if let Some(input) = input {
         match input.2 {
@@ -204,10 +212,7 @@ pub fn add_input( mut term: Term
         unimplemented!()
     };
 
-    match staging.add_input(input) {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.add_input(input).unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn add_output( mut term: Term
@@ -217,11 +222,6 @@ pub fn add_output( mut term: Term
                  )
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
-
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
 
     let output = if let Some(output) = output {
         core::Output {
@@ -233,10 +233,7 @@ pub fn add_output( mut term: Term
         unimplemented!()
     };
 
-    match staging.add_output(output) {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.add_output(output).unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn add_change( mut term: Term
@@ -247,20 +244,7 @@ pub fn add_change( mut term: Term
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
 
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
-
-    if staging.transaction.has_change() {
-        term.error("multiple change address not supported yet").unwrap();
-        ::std::process::exit(1);
-    }
-
-    match staging.add_change(change.into()) {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.add_change(change.into()).unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn remove_input( mut term: Term
@@ -270,11 +254,6 @@ pub fn remove_input( mut term: Term
                    )
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
-
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
 
     let txin = if let Some(input) = input {
         TxoPointer {
@@ -286,10 +265,7 @@ pub fn remove_input( mut term: Term
         unimplemented!()
     };
 
-    match staging.remove_input(txin) {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.remove_input(txin).unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn remove_output( mut term: Term
@@ -300,16 +276,8 @@ pub fn remove_output( mut term: Term
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
 
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
-
     if let Some(addr) = address {
-        match staging.remove_outputs_for(&addr) {
-            Err(err) => panic!("{:?}", err),
-            Ok(())   => ()
-        }
+        staging.remove_outputs_for(&addr).unwrap_or_else(|e| term.fail_with(e))
     } else {
         // TODO, implement interactive mode
         unimplemented!()
@@ -324,15 +292,7 @@ pub fn remove_change( mut term: Term
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
 
-    if staging.finalized() {
-        term.error("Cannot add input to a finalized staging transaction").unwrap();
-        ::std::process::exit(1);
-    }
-
-    match staging.remove_change(change) {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.remove_change(change).unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn finalize( mut term: Term
@@ -342,10 +302,7 @@ pub fn finalize( mut term: Term
 {
     let mut staging = load_staging(&mut term, root_dir, id_str);
 
-    match staging.finalize() {
-        Err(err) => panic!("{:?}", err),
-        Ok(())   => ()
-    }
+    staging.finalize().unwrap_or_else(|e| term.fail_with(e))
 }
 
 pub fn export( mut term: Term
@@ -379,7 +336,7 @@ pub fn import( mut term: Term
         ::serde_yaml::from_reader(&mut stdin).unwrap()
     };
 
-    let staging = StagingTransaction::import(root_dir, import).unwrap();
+    let staging = StagingTransaction::import(root_dir, import).unwrap_or_else(|e| term.fail_with(e));
     writeln!(&mut term, "Staging transaction `{}' successfully imported",
         style!(staging.id())
     );
@@ -398,7 +355,7 @@ pub fn input_select( mut term: Term
 
     let mut staging = load_staging(&mut term, root_dir.clone(), id_str);
 
-    if staging.finalized() {
+    if staging.is_finalized() {
         term.error("Cannot select inputs to a finalized staging transaction").unwrap();
         ::std::process::exit(1);
     }
@@ -427,18 +384,12 @@ pub fn input_select( mut term: Term
         Ok(v) => v
     };
 
-    if change != Coin::zero() {
-        term.info(&format!("using the change address: {} with value {}", change_address, change)).unwrap();
-        // add/remove the output change
-        staging.add_output(core::Output { address : change_address, amount: change }).unwrap();
-    }
-
     for input in selected_inputs {
         staging.add_input(core::Input {
             transaction_id: input.ptr.id,
             index_in_transaction: input.ptr.index,
             expected_value: input.value.value
-        }).unwrap()
+        }).unwrap_or_else(|e| term.fail_with(e));
     }
 }
 

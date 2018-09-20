@@ -1,9 +1,19 @@
 use cardano::{tx::{TxId, TxOut, TxoPointer, TxInWitness}, coin::{Coin}, address::{ExtendedAddr}};
 use serde_yaml;
+use std::{fmt, error};
 
 #[derive(Debug)]
 pub enum ParsingOperationError {
     Yaml(String)
+}
+impl fmt::Display for ParsingOperationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParsingOperationError::Yaml(err) => write!(f, "{}", err)
+        }
+    }
+}
+impl error::Error for ParsingOperationError {
 }
 
 /// here are the operations that we will record in staging transactions.

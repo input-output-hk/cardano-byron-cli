@@ -70,8 +70,9 @@ impl<A> UTxO<A> {
 impl<A: fmt::Display> fmt::Display for UTxO<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!( f
-              , "{} received {}Ada-Lovelace in transaction id `{}.{}'"
+              , "{} ({}) received {}Ada in transaction id `{}.{}'"
               , self.credited_address
+              , self.credited_addressing
               , self.credited_value
               , self.transaction_id
               , self.index_in_transaction

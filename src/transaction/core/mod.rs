@@ -1,7 +1,7 @@
-mod staging_id;
-mod operation;
-mod transaction;
-mod staging_transaction;
+pub mod staging_id;
+pub mod operation;
+pub mod transaction;
+pub mod staging_transaction;
 pub mod config;
 
 pub use self::staging_id::{StagingId};

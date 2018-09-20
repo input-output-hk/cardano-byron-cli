@@ -36,17 +36,17 @@ pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
     progress.set_message("loading transactions... ");
 
     let mut last_block_date = from_date;
-    for res in TransactionIterator::new(progress, blockchain.iter_to_tip(from).unwrap() /* BAD */) {
-        let (ptr, txaux) = res.unwrap(); // BAD
+    for res in TransactionIterator::new(progress, blockchain.iter_to_tip(from).unwrap_or_else(|e| term.fail_with(e)) ) {
+        let (ptr, txaux) = res.unwrap_or_else(|e| term.fail_with(e));
         debug!("transactions in: {}", ptr);
 
         if let Some(addr) = ptr.latest_addr {
             if last_block_date.get_epochid() != addr.get_epochid() {
 
                 let log_lock = lock_wallet_log(&wallet);
-                let mut writer = log::LogWriter::open(log_lock).unwrap();
+                let mut writer = log::LogWriter::open(log_lock).unwrap_or_else(|e| term.fail_with(e));
                 let log : log::Log<ExtendedAddr> = log::Log::Checkpoint(ptr.clone());
-                writer.append(&log).unwrap();
+                writer.append(&log).unwrap_or_else(|e| term.fail_with(e));
             }
 
             last_block_date = addr.clone();
@@ -55,10 +55,10 @@ pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
         {
             let logs = state.forward_with_txins(
                 txaux.tx.inputs.iter().map(|txin| (ptr.clone(), txin))
-            ).unwrap();
+            ).unwrap_or_else(|e| term.fail_with(e));
             let log_lock = lock_wallet_log(&wallet);
-            let mut writer = log::LogWriter::open(log_lock).unwrap();
-            for log in logs { writer.append(&log).unwrap(); }
+            let mut writer = log::LogWriter::open(log_lock).unwrap_or_else(|e| term.fail_with(e));
+            for log in logs { writer.append(&log).unwrap_or_else(|e| term.fail_with(e)); }
         }
 
         {
@@ -75,11 +75,11 @@ pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
                       }
                     )
                 })
-            ).unwrap();
+            ).unwrap_or_else(|e| term.fail_with(e));
 
             let log_lock = lock_wallet_log(&wallet);
-            let mut writer = log::LogWriter::open(log_lock).unwrap();
-            for log in logs { writer.append(&log).unwrap(); }
+            let mut writer = log::LogWriter::open(log_lock).unwrap_or_else(|e| term.fail_with(e));
+            for log in logs { writer.append(&log).unwrap_or_else(|e| term.fail_with(e)); }
         }
     }
 }
@@ -201,16 +201,16 @@ pub fn create_wallet_state_from_logs<LS>(term: &mut Term, wallet: &Wallet, root_
 {
     let log_lock = lock_wallet_log(wallet);
     let state = state::State::from_logs(lookup_structure,
-        log::LogReader::open(log_lock).unwrap() // BAD
+        log::LogReader::open(log_lock).unwrap_or_else(|e| term.fail_with(e))
             .into_iter().filter_map(|r| {
                 match r {
                     Err(err) => {
-                        panic!("{:?}", err)
+                        term.fail_with(err)
                     },
                     Ok(v) => Some(v)
                 }
             })
-    ).unwrap(); // BAD
+    ).unwrap_or_else(|e| term.fail_with(e));
     match state {
         Ok(state) => state,
         Err(lookup_structure) => {
