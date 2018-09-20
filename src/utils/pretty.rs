@@ -148,7 +148,7 @@ impl Pretty for tx::Tx {
         Ok(())
     }
 }
-impl Pretty for tx::TxIn {
+impl Pretty for tx::TxoPointer {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
         where W: Write
     {

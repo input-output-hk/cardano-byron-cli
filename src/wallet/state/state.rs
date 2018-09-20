@@ -1,7 +1,7 @@
 use super::utxo::{UTxO, UTxOs};
 use super::log::{Log};
 use super::{lookup::{AddressLookup, Address}, ptr::StatePtr};
-use cardano::{tx::TxIn, coin::{self, Coin}, address::ExtendedAddr};
+use cardano::{tx::TxoPointer, coin::{self, Coin}, address::ExtendedAddr};
 
 #[derive(Debug)]
 pub struct State<T: AddressLookup> {
@@ -65,7 +65,7 @@ impl<T: AddressLookup> State<T> {
     }
 
     pub fn forward_with_txins<'a, I>(&mut self, iter: I) -> Result<Vec<Log<Address>>, T::Error>
-        where I: IntoIterator<Item = (StatePtr, &'a TxIn)>
+        where I: IntoIterator<Item = (StatePtr, &'a TxoPointer)>
     {
         let mut events = Vec::new();
         for (ptr, txin) in iter {

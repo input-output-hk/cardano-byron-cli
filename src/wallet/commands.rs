@@ -375,5 +375,5 @@ pub fn address( mut term: Term
         }
     };
 
-    writeln!(term, "{}", style!(addr));
+    writeln!(term, "{}", style!(addr)).unwrap();
 }
