@@ -311,7 +311,7 @@ pub fn status( term: &mut Term
 
     writeln!(term, "input-total: {}", input_total)?;
     writeln!(term, "output-total: {}", output_total)?;
-    writeln!(term, "actual fee: {}", difference)?;
+    writeln!(term, "actual fee: {}.{}", difference / 1000000, difference % 1000000)?;
     writeln!(term, "fee: {}", fee.to_coin())?;
     writeln!(term, "tx-bytes: {}", txbytes_length)?;
 
