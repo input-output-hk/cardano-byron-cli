@@ -55,40 +55,40 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
         match self {
-            IoError(_)                                 => writeln!(f, "I/O Error"),
-            InvalidStagingId(_)                        => writeln!(f, "Invalid Staging ID"),
-            CannotLoadStagingTransaction(_)            => writeln!(f, "Cannot load the staging transaction"),
-            CannotCreateNewTransaction(_)              => writeln!(f, "Cannot create a new Staging Transaction"),
-            CannotDestroyTransaction(_)                => writeln!(f, "Cannot destroy the Staging Transaction"),
-            CannotSendTransactionNotFinalized(_)       => writeln!(f, "Cannot send transaction, finalize it first"),
-            CannotSendTransactionInvalidTxAux(_)       => writeln!(f, "Cannot send transaction"),
-            CannotSendTransactionNotSent               => writeln!(f, "Cannot send transaction to any blockchain peers"),
-            CannotSignTransactionNotFinalized(_)       => writeln!(f, "Cannot sign transaction, finalize it first"),
-            CannotSignTransactionInvalidTxAux(_)       => writeln!(f, "Cannot sign transaction"),
-            CannotSignTransactionCannotAddSignature(_) => writeln!(f, "Cannot add signature to the transaction"),
-            CannotReportStatusInvalidInputTotal(_)     => writeln!(f, "Input total of the transaction is invalid"),
-            CannotReportStatusInvalidOutputTotal(_)    => writeln!(f, "Output total of the transaction is invalid"),
-            CannotReportStatusInvalidTxBuilder(_)      => writeln!(f, "Cannot gather the transaction status"),
-            CannotReportStatusInvalidTx(_)             => writeln!(f, "The transaction is not valid"),
-            CannotReportStatusInvalidFee(_)            => writeln!(f, "Fee computation returned an error"),
-            CannotAddInput(_)                          => writeln!(f, "Cannot add input to staging transaction"),
-            CannotFindInputsInAllLocalUtxos            => writeln!(f, "Cannot find inputs within the local UTxOs"),
-            CannotAddOutput(_)                         => writeln!(f, "Cannot add output to the staging transaction"),
-            CannotAddChange(_)                         => writeln!(f, "Cannot add change to the staging transaction"),
-            CannotRemoveInput(_)                       => writeln!(f, "Cannot remove input from the staging transaction"),
-            CannotRemoveOutput(_)                      => writeln!(f, "Cannot remove output from the staging transaction"),
-            CannotRemoveChange(_)                      => writeln!(f, "Cannot remove change from the staging transaction"),
-            CannotFinalize(_)                          => writeln!(f, "Cannot finalize the staging transaction"),
-            CannotExportToFileCannotOpenOutFile(_)     => writeln!(f, "Cannot export the staging transaction: cannot open output file"),
-            CannotExportToFile(_)                      => writeln!(f, "Cannot export the staging transaction to the output file"),
-            CannotExportToStdout(_)                    => writeln!(f, "Cannot export the staging transaction to the standard output"),
-            CannotImportFromFileCannotOpenInputFile(_) => writeln!(f, "Cannot import the staging transaction: cannot open input file"),
-            CannotImportFromFile(_)                    => writeln!(f, "Cannot import the staging transaction from the input file"),
-            CannotImportFromStdin(_)                   => writeln!(f, "Cannot import the staging transaction from the standard input"),
-            CannotImportStaging(_)                     => writeln!(f, "Cannot import the staging transaction: invalid or corrupted"),
-            CannotInputSelectNoChangeOption            => writeln!(f, "Add change before trying to run the input selection algorithm"),
-            CannotInputSelectSelectionFailed(_)        => writeln!(f, "Input selection algorithm failed to run"),
-            CannotInputSelectCannotAddInput(_)         => writeln!(f, "Cannot add input to the staging transaction"),
+            IoError(_)                                 => write!(f, "I/O Error"),
+            InvalidStagingId(_)                        => write!(f, "Invalid Staging ID"),
+            CannotLoadStagingTransaction(_)            => write!(f, "Cannot load the staging transaction"),
+            CannotCreateNewTransaction(_)              => write!(f, "Cannot create a new Staging Transaction"),
+            CannotDestroyTransaction(_)                => write!(f, "Cannot destroy the Staging Transaction"),
+            CannotSendTransactionNotFinalized(_)       => write!(f, "Cannot send transaction, finalize it first"),
+            CannotSendTransactionInvalidTxAux(_)       => write!(f, "Cannot send transaction"),
+            CannotSendTransactionNotSent               => write!(f, "Cannot send transaction to any blockchain peers"),
+            CannotSignTransactionNotFinalized(_)       => write!(f, "Cannot sign transaction, finalize it first"),
+            CannotSignTransactionInvalidTxAux(_)       => write!(f, "Cannot sign transaction"),
+            CannotSignTransactionCannotAddSignature(_) => write!(f, "Cannot add signature to the transaction"),
+            CannotReportStatusInvalidInputTotal(_)     => write!(f, "Input total of the transaction is invalid"),
+            CannotReportStatusInvalidOutputTotal(_)    => write!(f, "Output total of the transaction is invalid"),
+            CannotReportStatusInvalidTxBuilder(_)      => write!(f, "Cannot gather the transaction status"),
+            CannotReportStatusInvalidTx(_)             => write!(f, "The transaction is not valid"),
+            CannotReportStatusInvalidFee(_)            => write!(f, "Fee computation returned an error"),
+            CannotAddInput(_)                          => write!(f, "Cannot add input to staging transaction"),
+            CannotFindInputsInAllLocalUtxos            => write!(f, "Cannot find inputs within the local UTxOs"),
+            CannotAddOutput(_)                         => write!(f, "Cannot add output to the staging transaction"),
+            CannotAddChange(_)                         => write!(f, "Cannot add change to the staging transaction"),
+            CannotRemoveInput(_)                       => write!(f, "Cannot remove input from the staging transaction"),
+            CannotRemoveOutput(_)                      => write!(f, "Cannot remove output from the staging transaction"),
+            CannotRemoveChange(_)                      => write!(f, "Cannot remove change from the staging transaction"),
+            CannotFinalize(_)                          => write!(f, "Cannot finalize the staging transaction"),
+            CannotExportToFileCannotOpenOutFile(_)     => write!(f, "Cannot export the staging transaction: cannot open output file"),
+            CannotExportToFile(_)                      => write!(f, "Cannot export the staging transaction to the output file"),
+            CannotExportToStdout(_)                    => write!(f, "Cannot export the staging transaction to the standard output"),
+            CannotImportFromFileCannotOpenInputFile(_) => write!(f, "Cannot import the staging transaction: cannot open input file"),
+            CannotImportFromFile(_)                    => write!(f, "Cannot import the staging transaction from the input file"),
+            CannotImportFromStdin(_)                   => write!(f, "Cannot import the staging transaction from the standard input"),
+            CannotImportStaging(_)                     => write!(f, "Cannot import the staging transaction: invalid or corrupted"),
+            CannotInputSelectNoChangeOption            => write!(f, "Add change before trying to run the input selection algorithm"),
+            CannotInputSelectSelectionFailed(_)        => write!(f, "Input selection algorithm failed to run"),
+            CannotInputSelectCannotAddInput(_)         => write!(f, "Cannot add input to the staging transaction"),
         }
     }
 }
@@ -146,7 +146,7 @@ pub fn new( term: &mut Term
     let staging = StagingTransaction::new(root_dir, blockchain.config.protocol_magic)
         .map_err(Error::CannotCreateNewTransaction)?;
 
-    writeln!(term, "Staging file successfully created: {}", style!(staging.id()))?;
+    writeln!(term, "{}", style!(staging.id()))?;
 
     Ok(())
 }

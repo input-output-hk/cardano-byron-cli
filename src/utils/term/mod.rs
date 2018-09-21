@@ -144,7 +144,7 @@ impl Term {
         writeln!(self, "{}", e);
         while let Some(err) = error.cause() {
             error = err;
-            writeln!(self, "  |-> {}", e);
+            writeln!(self, "  |-> {}", err);
         }
         ::std::process::exit(1)
     }
