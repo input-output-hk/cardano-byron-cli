@@ -28,8 +28,14 @@ impl<'a> ConnectedPeer<'a> {
         }
     }
 
-    pub fn send_txaux(mut self, txaux: TxAux) {
-        let _sent = self.connection.send_transaction(txaux).unwrap();
+    pub fn send_txaux(mut self, txaux: TxAux) -> bool {
+        match self.connection.send_transaction(txaux) {
+            Err(err) => {
+                warn!("cannot send transaction to {}: {}", self.peer.name, err);
+                false
+            },
+            Ok(sent) => sent
+        }
     }
 
     pub fn sync(mut self, term: &mut Term) -> Peer<'a> {
