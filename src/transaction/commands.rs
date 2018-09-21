@@ -236,9 +236,11 @@ pub fn sign( term: &mut Term
     let mut staging = load_staging(root_dir.clone(), id_str)?;
     let (finalized, changes) = staging.transaction().mk_finalized()
         .map_err(Error::CannotSignTransactionNotFinalized)?;
-    let txaux = finalized.make_txaux()
+    let tx = staging.transaction().mk_txbuilder()
+        .map_err(Error::CannotSignTransactionNotFinalized)?
+        .0.make_tx()
         .map_err(Error::CannotSignTransactionInvalidTxAux)?;
-    let txid = txaux.tx.id();
+    let txid = tx.id();
     let protocol_magic = staging.protocol_magic;
 
     // TODO: ignore already signed inputs
