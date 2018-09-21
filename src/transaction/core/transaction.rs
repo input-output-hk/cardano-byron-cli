@@ -143,7 +143,12 @@ impl Transaction {
             return Err(Error::TransactionNotFinalized);
         }
         let tx = builder.make_tx().map_err(Error::CannotBuildTxFromBuilder)?;
-        let finalized = TxFinalized::new(tx);
+        let mut finalized = TxFinalized::new(tx);
+
+        for signature in self.witnesses.iter() {
+            finalized.add_witness(signature.clone())
+                .map_err(Error::CannotBuildTxFromBuilder)?;
+        }
 
         Ok((finalized, changes_used))
     }
