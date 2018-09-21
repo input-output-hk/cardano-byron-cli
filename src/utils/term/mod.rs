@@ -12,7 +12,7 @@ use dialoguer;
 
 pub use self::config::{Config, ColorChoice};
 
-use std::{io::{self, Write}};
+use std::{io::{self, Write}, error::{Error}};
 
 pub const DEFAULT_TERM_WIDTH : usize = 80;
 pub const DEFAULT_TERM_HEIGHT: usize = 24;
@@ -135,6 +135,18 @@ impl Term {
     }
     pub fn error(&mut self, msg: &str) -> io::Result<()> {
         write!(&mut self.term, "{}", self.style.error.apply_to(msg))
+    }
+
+    pub fn fail_with<E>(&mut self, e: E) -> !
+        where E: Error
+    {
+        let mut error : &Error = &e;
+        writeln!(self, "{}", e);
+        while let Some(err) = error.cause() {
+            error = err;
+            writeln!(self, "  |-> {}", e);
+        }
+        ::std::process::exit(1)
     }
 }
 impl ::std::ops::Deref for Term {

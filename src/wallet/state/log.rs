@@ -1,5 +1,5 @@
 use storage_units::{append, utils::{serialize, lock::{self, Lock}}};
-use std::{path::{PathBuf}, fmt, result, io::{self, Read, Write}};
+use std::{path::{PathBuf}, fmt, result, io::{self, Read, Write}, error};
 use cardano::{block::{BlockDate, HeaderHash, types::EpochSlotId}};
 
 use super::{ptr::{StatePtr}, utxo::{UTxO}};
@@ -27,6 +27,32 @@ impl From<append::Error> for Error {
         match e {
             append::Error::NotFound => Error::LogNotFound,
             _ => Error::AppendError(e)
+        }
+    }
+}
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::LogNotFound         => write!(f, "Log file not found"),
+            Error::IoError(_)          => write!(f, "I/O Error"),
+            Error::LogFormatError(err) => write!(f, "Log format error: `{}`", err),
+            Error::LockError(_)        => write!(f, "Log's Lock file error"),
+            Error::AppendError(_)      => write!(f, "Error when appending data to the log file"),
+            Error::UnsupportedLogFormat(_) => {
+                write!(f, "Unsupported Log format (tried to deserialize log of unknown encoding or log is corrupted)")
+            }
+        }
+    }
+}
+impl error::Error for Error {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            Error::LogNotFound             => None,
+            Error::IoError(ref err)        => Some(err),
+            Error::LogFormatError(_)       => None,
+            Error::LockError(ref err)      => Some(err),
+            Error::AppendError(ref err)    => Some(err),
+            Error::UnsupportedLogFormat(_) => None,
         }
     }
 }

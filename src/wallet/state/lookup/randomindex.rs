@@ -44,25 +44,14 @@ impl AddressLookup for RandomIndexLookup {
         match opt_addressing {
             None => Ok(None),
             Some(addressing) => {
-                match self.generator.compare_address(&utxo.credited_address, &addressing) {
-                    Err(rindex::Error::CannotReconstructAddress) => {
-                        // we were not able to reconstruct the wallet's address
-                        // it could be due to that:
-                        //
-                        // 1. this address is using a different derivation scheme;
-                        // 2. the address has been falsified (someone copied
-                        //    an HDPayload from another of the wallet's addresses and
-                        //    put it in one of its address);
-                        // 3. that the software needs to be updated.
-                        //
-                        error!("the address at {} cannot be reconstructed. We managed to actually decode it, but cannot reconstruct the address.", utxo);
-                        Err(rindex::Error::CannotReconstructAddress)
-                    },
-                    Err(err) => {
-                        error!("error with the address at `{:?}'", err);
-                        Err(err)
-                    },
-                    Ok(()) => { Ok(Some(utxo.map(|_| addressing.into()))) }
+                let address = self.get_address(&addressing);
+
+                if address != utxo.credited_address {
+                    debug!("credited address:    {}", utxo.credited_address);
+                    debug!("constructed address: {}", address);
+                    Err(rindex::Error::CannotReconstructAddress(address))
+                } else {
+                    Ok(Some(utxo.map(|_| addressing.into())))
                 }
             }
         }

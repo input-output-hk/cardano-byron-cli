@@ -831,85 +831,101 @@ fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: 
     match matches.subcommand() {
         ("new", Some(matches)) => {
             let blockchain = blockchain_argument_name_match(&matches);
-            transaction::commands::new(term, root_dir, blockchain);
+            transaction::commands::new(&mut term, root_dir, blockchain)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("list", _) => {
-            transaction::commands::list(term, root_dir);
+            transaction::commands::list(&mut term, root_dir)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("destroy", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            transaction::commands::destroy(term, root_dir, id);
+            transaction::commands::destroy(&mut term, root_dir, id)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("export", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let file = matches.value_of("EXPORT_FILE");
-            transaction::commands::export(term, root_dir, id, file);
+            transaction::commands::export(&mut term, root_dir, id, file)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("import", Some(matches)) => {
             let file = matches.value_of("IMPORT_FILE");
-            transaction::commands::import(term, root_dir, file);
+            transaction::commands::import(&mut term, root_dir, file)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("send", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let blockchain = blockchain_argument_name_match(&matches);
 
-            transaction::commands::send(term, root_dir, id, blockchain);
+            transaction::commands::send(&mut term, root_dir, id, blockchain)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("finalize", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
 
-            transaction::commands::finalize(term, root_dir, id);
+            transaction::commands::finalize(&mut term, root_dir, id)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("sign", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
 
-            transaction::commands::sign(term, root_dir, id);
+            transaction::commands::sign(&mut term, root_dir, id)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("add-input", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let input = transaction_argument_input_match(&matches);
 
-            transaction::commands::add_input(term, root_dir, id, input);
+            transaction::commands::add_input(&mut term, root_dir, id, input)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("add-output", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let output = transaction_argument_output_match(&matches);
 
-            transaction::commands::add_output(term, root_dir, id, output);
+            transaction::commands::add_output(&mut term, root_dir, id, output)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("add-change", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr).unwrap_or_else(|e| e.exit());
 
-            transaction::commands::add_change(term, root_dir, id, address);
+            transaction::commands::add_change(&mut term, root_dir, id, address)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("input-select", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let wallets = values_t!(matches, "WALLET_NAME", wallet::WalletName).unwrap_or_else(|e| e.exit());
 
-            transaction::commands::input_select(term, root_dir, id, wallets);
+            transaction::commands::input_select(&mut term, root_dir, id, wallets)
+                .unwrap_or_else(|e| term.fail_with(e));
         }
         ("rm-output", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let address = value_t!(matches, "TRANSACTION_ADDRESS", cardano::address::ExtendedAddr).ok();
 
-            transaction::commands::remove_output(term, root_dir, id, address);
+            transaction::commands::remove_output(&mut term, root_dir, id, address)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("rm-input", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let txin = transaction_argument_txin_match(&matches);
 
-            transaction::commands::remove_input(term, root_dir, id, txin);
+            transaction::commands::remove_input(&mut term, root_dir, id, txin)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("rm-change", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr).unwrap_or_else(|e| e.exit());
 
-            transaction::commands::remove_change(term, root_dir, id, address);
+            transaction::commands::remove_change(&mut term, root_dir, id, address)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("status", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            transaction::commands::status(term, root_dir, id);
+            transaction::commands::status(&mut term, root_dir, id)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         _ => {
             term.error(matches.usage()).unwrap();

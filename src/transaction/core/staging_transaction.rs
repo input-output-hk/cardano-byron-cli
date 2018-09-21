@@ -1,9 +1,10 @@
 use storage_units::{append, utils::{serialize, lock::{self, Lock}}};
-use cardano::{util::{hex}, address::{ExtendedAddr}, tx::{TxInWitness, TxIn, TxAux}, config::{ProtocolMagic}};
-use std::{path::PathBuf};
+use cardano::{util::{hex}, address::{ExtendedAddr}, tx::{TxInWitness, TxoPointer}, config::{ProtocolMagic}};
+use std::{path::PathBuf, error, fmt};
 
 use super::{config, StagingId, Operation, Transaction, Input, Output, Change};
 use super::operation::{ParsingOperationError};
+use super::{transaction};
 
 pub struct StagingTransaction {
     /// the unique Staging ID associated to this staging
@@ -80,7 +81,7 @@ impl StagingTransaction {
 
     /// reconstruct a staging transaction from an `Export`.
     ///
-    pub fn import(root_dir: PathBuf, export: Export) -> append::Result<Self> {
+    pub fn import(root_dir: PathBuf, export: Export) -> Result<Self, StagingUpdateError> {
         debug!("transaction file's magic `{}'", export.magic);
         let mut st = Self::new_with(root_dir, export.protocol_magic, export.staging_id)?;
 
@@ -107,11 +108,7 @@ impl StagingTransaction {
     pub fn transaction(&self) -> &Transaction { &self.transaction }
 
     /// tell of the transaction is finalized and needs to be signed now
-    pub fn finalized(&self) -> bool { self.transaction.finalized() }
-
-    pub fn to_tx_aux(&self) -> TxAux {
-        self.transaction().to_tx_aux()
-    }
+    pub fn is_finalized(&self) -> bool { self.transaction.is_finalized() }
 
     /// retrieve a `StagingTransaction` from the given staging id. It will
     /// try to lock the staging file, to parse it and apply every operations
@@ -154,7 +151,7 @@ impl StagingTransaction {
         while let Some(operation) = reader.next()? {
             let operation = Operation::deserialize(&operation)?;
             operations.push(operation.clone());
-            transaction.update_with(operation);
+            transaction.update_with(operation)?;
         }
 
         let w = append::Writer::open(reader.close())?;
@@ -176,18 +173,18 @@ impl StagingTransaction {
     /// 2. the transaction;
     /// 3. the in-memory list of operations
     ///
-    fn append(&mut self, transaction_op: Operation) -> append::Result<()> {
+    fn append(&mut self, transaction_op: Operation) -> Result<(), StagingUpdateError> {
         self.writer.append_bytes(&transaction_op.serialize())?;
-        self.transaction.update_with(transaction_op.clone());
+        self.transaction.update_with(transaction_op.clone())?;
         self.operations.push(transaction_op);
         Ok(())
     }
 
-    pub fn finalize(&mut self) -> append::Result<()> {
+    pub fn finalize(&mut self) -> Result<(), StagingUpdateError> {
         self.append(Operation::Finalize)
     }
 
-    pub fn add_signature(&mut self, signature: TxInWitness) -> append::Result<()> {
+    pub fn add_signature(&mut self, signature: TxInWitness) -> Result<(), StagingUpdateError> {
         self.append(Operation::Signature(signature))
     }
 
@@ -198,27 +195,15 @@ impl StagingTransaction {
     /// This function will panic if there is an attempt to double spend
     /// funds.
     ///
-    pub fn add_input(&mut self, input: Input) -> append::Result<()> {
-        // prevent double spending
-        assert!(
-            self.transaction.lookup_input(input.extract_txin()).is_none(),
-            "Attempt to double spend the same UTxO ({:#?})",
-            input
-        );
-
+    pub fn add_input(&mut self, input: Input) -> Result<(), StagingUpdateError> {
         self.append(Operation::AddInput(input))
     }
 
-    pub fn add_change(&mut self, change: Change) -> append::Result<()> {
-        assert!(
-            ! self.transaction.has_change(),
-            "We do not support multiple change addresses yet"
-        );
-
+    pub fn add_change(&mut self, change: Change) -> Result<(), StagingUpdateError> {
         self.append(Operation::AddChange(change))
     }
 
-    pub fn add_output(&mut self, output: Output) -> append::Result<()> {
+    pub fn add_output(&mut self, output: Output) -> Result<(), StagingUpdateError> {
         // we don't need to check anything here, we don't mind
         // reusing twice the same address/output
         self.append(Operation::AddOutput(output))
@@ -230,14 +215,7 @@ impl StagingTransaction {
     ///
     /// This function will panic if the TxIn does not match any inputs
     ///
-    pub fn remove_input(&mut self, txin: TxIn) -> append::Result<()> {
-        // we can only remove existing inputs
-        assert!(
-            self.transaction.lookup_input(txin.clone()).is_some(),
-            "cannot remove input, it is not present in the transaction ({:#?})",
-            txin
-        );
-
+    pub fn remove_input(&mut self, txin: TxoPointer) -> Result<(), StagingUpdateError> {
         self.append(Operation::RemoveInput(txin))
     }
 
@@ -247,7 +225,7 @@ impl StagingTransaction {
     ///
     /// This function will panic if the TxIn does not match any inputs
     ///
-    pub fn remove_change(&mut self, address: ExtendedAddr) -> append::Result<()> {
+    pub fn remove_change(&mut self, address: ExtendedAddr) -> Result<(), StagingUpdateError> {
         self.append(Operation::RemoveChange(address))
     }
 
@@ -258,18 +236,13 @@ impl StagingTransaction {
     /// This function will panic if the index is out of bound
     /// (i.e. if there is no output at the given index).
     ///
-    pub fn remove_output(&mut self, index: u32) -> append::Result<()> {
-        assert!(
-            self.transaction.outputs().get(index as usize).is_some(),
-            "attempt to delete an output that is not present in the transaction (index: {})",
-            index
-        );
+    pub fn remove_output(&mut self, index: u32) -> Result<(), StagingUpdateError> {
         self.append(Operation::RemoveOutput(index))
     }
 
 
     /// remove every output associated to the given address
-    pub fn remove_outputs_for(&mut self, address: &ExtendedAddr) -> append::Result<()> {
+    pub fn remove_outputs_for(&mut self, address: &ExtendedAddr) -> Result<(), StagingUpdateError> {
         let mut index = 0;
 
         while index != self.transaction.outputs().len() {
@@ -282,6 +255,42 @@ impl StagingTransaction {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum StagingUpdateError {
+    AppendFile(append::Error),
+    TransactionIsInvalidState(transaction::Error),
+}
+impl From<append::Error> for StagingUpdateError {
+    fn from(e: append::Error) -> Self {
+        StagingUpdateError::AppendFile(e)
+    }
+}
+impl From<transaction::Error> for StagingUpdateError {
+    fn from(e: transaction::Error) -> Self {
+        StagingUpdateError::TransactionIsInvalidState(e)
+    }
+}
+impl fmt::Display for StagingUpdateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StagingUpdateError::AppendFile(_)                => {
+                write!(f, "Staging transaction corrupted or unsupported format")
+            },
+            StagingUpdateError::TransactionIsInvalidState(_) => {
+                write!(f, "Invalid operation on transaction")
+            },
+        }
+    }
+}
+impl error::Error for StagingUpdateError {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            StagingUpdateError::AppendFile(ref err)                => Some(err),
+            StagingUpdateError::TransactionIsInvalidState(ref err) => Some(err),
+        }
     }
 }
 
@@ -304,7 +313,9 @@ pub enum StagingTransactionParseError {
     InvalidMagic(Vec<u8>),
 
     /// error while parsing an operation
-    Operation(ParsingOperationError)
+    Operation(ParsingOperationError),
+
+    TransactionIsInvalidState(transaction::Error),
 }
 impl From<ParsingOperationError> for StagingTransactionParseError {
     fn from(e: ParsingOperationError) -> Self {
@@ -324,6 +335,48 @@ impl From<lock::Error> for StagingTransactionParseError {
 impl From<append::Error> for StagingTransactionParseError {
     fn from(e: append::Error) -> Self {
         StagingTransactionParseError::AppendFile(e)
+    }
+}
+impl From<transaction::Error> for StagingTransactionParseError {
+    fn from(e: transaction::Error) -> StagingTransactionParseError {
+        StagingTransactionParseError::TransactionIsInvalidState(e)
+    }
+}
+
+impl fmt::Display for StagingTransactionParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StagingTransactionParseError::AppendFile(_)                => {
+                write!(f, "Staging transaction corrupted or unsupported format")
+            },
+            StagingTransactionParseError::NoMagic                      => {
+                write!(f, "Staging file is missing its MagicNumber")
+            },
+            StagingTransactionParseError::MissingProtocolMagic         => {
+                write!(f, "Staging file is missing the protocol magic")
+            },
+            StagingTransactionParseError::InvalidMagic(_)              => {
+                write!(f, "Invalid magic")
+            },
+            StagingTransactionParseError::Operation(_)                 => {
+                write!(f, "Error in the sequence of operation in the staging transation file")
+            },
+            StagingTransactionParseError::TransactionIsInvalidState(_) => {
+                write!(f, "The staging transaction is in an invalid state")
+            },
+        }
+    }
+}
+impl error::Error for StagingTransactionParseError {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            StagingTransactionParseError::AppendFile(ref err)                => Some(err),
+            StagingTransactionParseError::NoMagic                            => None,
+            StagingTransactionParseError::MissingProtocolMagic               => None,
+            StagingTransactionParseError::InvalidMagic(_)                    => None,
+            StagingTransactionParseError::Operation(ref err)                 => Some(err),
+            StagingTransactionParseError::TransactionIsInvalidState(ref err) => Some(err),
+        }
     }
 }
 

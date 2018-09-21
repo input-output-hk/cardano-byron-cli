@@ -10,7 +10,7 @@ pub mod accum;
 pub use self::address::{Address};
 
 pub trait AddressLookup {
-    type Error        : ::std::fmt::Debug;
+    type Error        : ::std::error::Error;
 
     /// the implementor will attempt the recognize the given UTxO's credited_address.
     ///

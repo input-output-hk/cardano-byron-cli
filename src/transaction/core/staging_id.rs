@@ -1,7 +1,7 @@
 use rand;
 use storage_units::utils::serialize::{SIZE_SIZE, read_size, write_size};
 use cardano::util::{base58};
-use std::{str, fmt};
+use std::{str, fmt, error};
 use serde::{ser, de};
 
 /// a Staging ID represents a transaction under construction
@@ -99,12 +99,20 @@ pub enum ParseStagingIdError {
 impl fmt::Display for ParseStagingIdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParseStagingIdError::Base58Encoding(err) => {
-                write!(f, "not a valid base58 encoding: {}", err)
+            ParseStagingIdError::Base58Encoding(_) => {
+                write!(f, "Expected Base58 encoded string")
             },
             ParseStagingIdError::InvalidSize(found) => {
                 write!(f, "not of a valid size (expected {}, but got {})", SIZE_SIZE, found)
             }
+        }
+    }
+}
+impl error::Error for ParseStagingIdError {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            ParseStagingIdError::Base58Encoding(ref err) => Some(err),
+            ParseStagingIdError::InvalidSize(_)          => None
         }
     }
 }

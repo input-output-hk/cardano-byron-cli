@@ -4,6 +4,7 @@ use cardano::{wallet::{bip44, rindex}, address::{ExtendedAddr}};
 pub enum Address {
     Bip44(bip44::Addressing),
     RIndex(rindex::Addressing),
+    RIndexInvalid(Vec<u32>),
     Unknown(ExtendedAddr)
 }
 impl ::std::fmt::Display for Address {
@@ -11,6 +12,7 @@ impl ::std::fmt::Display for Address {
         match self {
             Address::Bip44(address) => write!(f, "{}", address),
             Address::RIndex(address) => write!(f, "{}", address),
+            Address::RIndexInvalid(path) => write!(f, "{:?}", path),
             Address::Unknown(address) => write!(f, "{}", address),
         }
     }

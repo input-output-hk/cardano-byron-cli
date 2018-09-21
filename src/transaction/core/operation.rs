@@ -1,9 +1,19 @@
-use cardano::{tx::{TxId, TxOut, TxIn, TxInWitness}, coin::{Coin}, address::{ExtendedAddr}};
+use cardano::{tx::{TxId, TxOut, TxoPointer, TxInWitness}, coin::{Coin}, address::{ExtendedAddr}};
 use serde_yaml;
+use std::{fmt, error};
 
 #[derive(Debug)]
 pub enum ParsingOperationError {
     Yaml(String)
+}
+impl fmt::Display for ParsingOperationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParsingOperationError::Yaml(err) => write!(f, "{}", err)
+        }
+    }
+}
+impl error::Error for ParsingOperationError {
 }
 
 /// here are the operations that we will record in staging transactions.
@@ -25,7 +35,7 @@ pub enum Operation {
     /// remove output we could use the index position within the
     /// collection of inputs it is better to identify the input
     /// as a unique txin for guarantee purpose.
-    RemoveInput(TxIn),
+    RemoveInput(TxoPointer),
 
     /// here we have chose to simply use the index of the output
     /// (i.e. the position order in which the output is within the
@@ -93,8 +103,8 @@ impl Input {
     /// collect the transaction input. By design this `TxIn` represents
     /// a unique identifier to the input funds (or the unspent transaction output)
     ///
-    pub fn extract_txin(&self) -> TxIn {
-        TxIn {
+    pub fn extract_txin(&self) -> TxoPointer {
+        TxoPointer {
             id: self.transaction_id,
             index: self.index_in_transaction
         }
