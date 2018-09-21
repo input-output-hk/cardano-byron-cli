@@ -141,10 +141,12 @@ impl Term {
         where E: Error
     {
         let mut error : &Error = &e;
-        writeln!(self, "{}", e);
+        let formated = format!("{}", e);
+        writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
         while let Some(err) = error.cause() {
             error = err;
-            writeln!(self, "  |-> {}", err);
+            let formated = format!("{}", err);
+            writeln!(& mut self.term, "  |-> {}", self.style.warning.apply_to(formated));
         }
         ::std::process::exit(1)
     }
