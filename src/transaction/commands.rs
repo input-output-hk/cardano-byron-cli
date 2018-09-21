@@ -3,7 +3,7 @@ use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
 use super::super::blockchain::{Blockchain};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
-use cardano::{self, tx::{self, TxId, TxoPointer, TxInWitness}, coin::{self, Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
+use cardano::{self, tx::{self, Tx, TxId, TxoPointer, TxInWitness}, coin::{self, Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
 use storage_units;
 
 #[derive(Debug)]
@@ -291,7 +291,7 @@ pub fn status( term: &mut Term
     let (builder, changes) = staging.transaction().mk_txbuilder()
         .map_err(Error::CannotReportStatusInvalidTxBuilder)?;
     let tx = builder.make_tx()
-        .map_err(Error::CannotReportStatusInvalidTx)?;
+        .unwrap_or_else(|_| Tx::new());
     let output_total = tx.get_output_total()
         .map_err(Error::CannotReportStatusInvalidOutputTotal)?;
     let difference = {
