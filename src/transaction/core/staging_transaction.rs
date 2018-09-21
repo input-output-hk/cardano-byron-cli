@@ -174,8 +174,8 @@ impl StagingTransaction {
     /// 3. the in-memory list of operations
     ///
     fn append(&mut self, transaction_op: Operation) -> Result<(), StagingUpdateError> {
-        self.writer.append_bytes(&transaction_op.serialize())?;
         self.transaction.update_with(transaction_op.clone())?;
+        self.writer.append_bytes(&transaction_op.serialize())?;
         self.operations.push(transaction_op);
         Ok(())
     }
