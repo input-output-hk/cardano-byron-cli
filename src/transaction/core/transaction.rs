@@ -201,7 +201,7 @@ impl Transaction {
     }
     fn add_witness(&mut self, witness: TxInWitness) -> Result<&mut Self> {
         if ! self.is_finalized() { return Err(Error::CannotAddWitnessesToAnOpenedTransaction); }
-        if self.inputs.len() >= self.witnesses.len() {
+        if self.inputs.len() <= self.witnesses.len() {
             return Err(Error::CannotAddMoreWitnessesThanInputs);
         }
         self.witnesses.push(witness);
