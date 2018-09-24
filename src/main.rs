@@ -301,6 +301,10 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             let name = blockchain_argument_name_match(&matches);
             blockchain::commands::verify_chain(term, root_dir, name);
         },
+        ("query", Some(matches)) => {
+            let name = blockchain_argument_name_match(&matches);
+            blockchain::commands::query(term, root_dir, name);
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -429,6 +433,28 @@ fn blockchain_commands_definition<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("verify")
             .about("verify all blocks in the chain")
             .arg(blockchain_argument_name_definition())
+        )
+        .subcommand(SubCommand::with_name("query")
+            .about("query in blocks")
+            .arg(blockchain_argument_name_definition())
+            .arg(Arg::with_name("start")
+                .value_name("HASH")
+                .required(false)
+                .help("The hash to start from (instead of the local blockchain's start)."))
+            .arg(Arg::with_name("end")
+                .value_name("HASH")
+                .required(false)
+                .help("The hash to end to (instead of the local blockchain's tip)."))
+            .arg(Arg::with_name("start-epoch")
+                .value_name("EPOCH")
+                .required(false)
+                .help("The start of epoch (inclusive)"))
+            )
+            .arg(Arg::with_name("end-epoch")
+                .value_name("EPOCH")
+                .required(false)
+                .help("The end of epoch (inclusive)"))
+            )
         )
 }
 

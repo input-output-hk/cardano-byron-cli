@@ -8,7 +8,7 @@ use utils::term::Term;
 
 use super::peer;
 use super::Blockchain;
-use cardano::{self, block::{RawBlock}};
+use cardano::{self, block::{RawBlock, EpochId, HeaderHash}};
 
 /// function to create and initialize a given new blockchain
 ///
@@ -486,4 +486,15 @@ pub fn verify_chain( mut term: Term
 
     term.success(&format!("All {} blocks are valid", nr_blocks)).unwrap();
     term.simply("\n").unwrap();
+}
+
+pub enum QueryTimeline {
+    TimeDefault,
+    Epoch(EpochId),
+    Hash(HeaderHash),
+}
+
+pub fn query(mut term: Term, root_dir: PathBuf, name: String, start: QueryTimeline, end: QueryTimeline, )
+{
+
 }
