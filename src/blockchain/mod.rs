@@ -4,6 +4,9 @@ pub mod peer;
 pub mod iter;
 pub mod parse_genesis_data;
 pub mod genesis_data;
+pub mod error;
+
+pub use self::error::{Error, Result};
 
 use std::path::PathBuf;
 
@@ -25,11 +28,12 @@ pub struct Blockchain {
 }
 impl Blockchain {
     /// create the new blockhain with the given setting
-    pub fn new(root_dir: PathBuf, name: String, config: Config) -> Self {
+    pub fn new(root_dir: PathBuf, name: String, config: Config) -> Result<Self> {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
 
-        let storage = Storage::init(&storage_config).unwrap();
+        let storage = Storage::init(&storage_config)
+            .map_err(Error::NewCannotInitializeBlockchainDirectory)?;
         let file = storage_config.get_config_file();
         config.to_file(file);
 
@@ -50,7 +54,7 @@ impl Blockchain {
 
         blockchain.save_tip(&blockchain.config.genesis);
 
-        blockchain
+        Ok(blockchain)
     }
 
     pub unsafe fn destroy(self) -> ::std::io::Result<()> {

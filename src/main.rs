@@ -3,6 +3,7 @@ use std::path::PathBuf;
 extern crate dirs;
 extern crate cardano_cli;
 extern crate cardano;
+#[macro_use]
 extern crate log;
 extern crate env_logger;
 
@@ -35,6 +36,8 @@ fn main() {
     let mut term = term::Term::new(configure_terminal(&matches));
 
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
+
+    debug!("cardano-cli's root directory: `{:?}`", root_dir);
 
     match matches.subcommand() {
         (BLOCKCHAIN_COMMAND, Some(matches))  => { subcommand_blockchain(term, root_dir, matches) },

@@ -10,6 +10,7 @@ use super::peer;
 use super::Blockchain;
 use super::parse_genesis_data;
 use super::genesis_data;
+use super::{peer, Blockchain, Result, Error};
 use cardano::{self, block::{RawBlock}};
 
 /// function to create and initialize a given new blockchain
@@ -27,47 +28,63 @@ pub fn new( mut term: Term
           , name: String
           , config: Config
           )
+    -> Result<()>
 {
-    let blockchain = Blockchain::new(root_dir, name.clone(), config);
+    let blockchain = Blockchain::new(root_dir, name.clone(), config)?;
     blockchain.save();
 
-    term.success(&format!("local blockchain `{}' created.\n", &name)).unwrap();
+    term.success(&format!("local blockchain `{}' created.\n", &name))?;
+
+    Ok(())
 }
 
 pub fn list( mut term: Term
            , root_dir: PathBuf
            , detailed: bool
            )
+    -> Result<()>
 {
     let blockchains_dir = super::config::blockchains_directory(&root_dir);
-    for entry in ::std::fs::read_dir(blockchains_dir).unwrap() {
+    let dir_reader = match ::std::fs::read_dir(blockchains_dir) {
+        Err(err) => {
+            use std::io::ErrorKind;
+            return match err.kind() {
+                ErrorKind::NotFound => Err(Error::ListNoBlockchains),
+                ErrorKind::PermissionDenied => Err(Error::ListPermissionsDenied),
+                _  => Err(Error::IoError(err)),
+            }
+        },
+        Ok(dr) => dr
+    };
+    for entry in dir_reader {
         let entry = entry.unwrap();
-        if ! entry.file_type().unwrap().is_dir() {
-            term.warn(&format!("unexpected file in blockchains directory: {:?}", entry.path())).unwrap();
+        if ! entry.file_type()?.is_dir() {
+            term.warn(&format!("unexpected file in blockchains directory: {:?}", entry.path()))?;
             continue;
         }
-        let name = entry.file_name().into_string().unwrap_or_else(|err| {
-            panic!("invalid utf8... {:?}", err)
-        });
+        let name = entry.file_name().into_string()
+            .map_err(Error::ListBlockchainWithNonUTF8Name)?;
 
         let blockchain = Blockchain::load(root_dir.clone(), name);
 
-        term.info(&blockchain.name).unwrap();
+        term.info(&blockchain.name)?;
         if detailed {
             let (tip, _is_genesis) = blockchain.load_tip();
             let tag_path = blockchain.dir.join("tag").join(super::LOCAL_BLOCKCHAIN_TIP_TAG);
-            let metadata = ::std::fs::metadata(tag_path).unwrap();
+            let metadata = ::std::fs::metadata(tag_path)?;
             let now = ::std::time::SystemTime::now();
-            let fetched_date = metadata.modified().unwrap();
+            let fetched_date = metadata.modified()?;
             let fetched_since = ::std::time::Duration::new(now.duration_since(fetched_date).unwrap().as_secs(), 0);
 
-            term.simply("\t").unwrap();
-            term.success(&format!("{} ({})", tip.hash, tip.date)).unwrap();
-            term.simply("\t").unwrap();
-            term.warn(&format!("(updated {} ago)", format_duration(fetched_since))).unwrap();
+            term.simply("\t")?;
+            term.success(&format!("{} ({})", tip.hash, tip.date))?;
+            term.simply("\t")?;
+            term.warn(&format!("(updated {} ago)", format_duration(fetched_since)))?;
         }
-        term.simply("\n").unwrap();
+        term.simply("\n")?;
     }
+
+    Ok(())
 }
 
 pub fn destroy( mut term: Term
