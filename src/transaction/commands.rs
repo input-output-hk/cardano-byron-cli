@@ -1,7 +1,7 @@
 use std::{path::PathBuf, io::{self, Write}, iter, collections::BTreeMap, fmt, error};
 use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
-use super::super::blockchain::{Blockchain};
+use super::super::blockchain::{Blockchain, BlockchainName};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
 use cardano::{self, tx::{self, Tx, TxId, TxoPointer, TxInWitness}, coin::{self, Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
 use storage_units;
@@ -137,7 +137,7 @@ impl error::Error for Error {
 /// function to create a new empty transaction
 pub fn new( term: &mut Term
           , root_dir: PathBuf
-          , blockchain: String
+          , blockchain: BlockchainName
           )
     -> Result<(), Error>
 {
@@ -191,7 +191,7 @@ pub fn destroy( _term: &mut Term
 pub fn send( term: &mut Term
            , root_dir: PathBuf
            , id_str: &str
-           , blockchain: String
+           , blockchain: BlockchainName
            )
     -> Result<(), Error>
 {

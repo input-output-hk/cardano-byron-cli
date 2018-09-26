@@ -1,9 +1,10 @@
-use std::{path::PathBuf};
+use std::{path::PathBuf, str::FromStr};
 use cardano::{hdwallet::{self, DerivationScheme}};
 
 use super::Error;
 use super::Result;
 use super::super::utils::password_encrypted::{self, Password};
+use blockchain::{BlockchainName, BlockchainNameError};
 
 /// directory where all the wallet will be in
 pub const WALLETS_DIRECTORY : &'static str = "wallets";
@@ -53,6 +54,19 @@ pub struct Config {
     /// This is needed so we know what kind of wallet HD we are dealing with
     ///
     pub hdwallet_model: HDWalletModel
+}
+impl Config {
+    pub fn attached_blockchain(&self) -> ::std::result::Result<Option<BlockchainName>, BlockchainNameError> {
+        match self.attached_blockchain {
+            None => Ok(None),
+            Some(ref s) => {
+                match BlockchainName::from_str(&s) {
+                    Ok(v) => Ok(Some(v)),
+                    Err(err) => Err(err)
+                }
+            }
+        }
+    }
 }
 impl Default for Config {
     fn default() -> Self {

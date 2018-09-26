@@ -1,4 +1,4 @@
-use std::{io, fmt::{self, Display, Formatter}, error::{self}};
+use std::{io, fmt, error};
 use cardano_storage;
 
 #[derive(Debug)]
@@ -9,7 +9,7 @@ pub enum Error {
 
     ListNoBlockchains,
     ListPermissionsDenied,
-    ListBlockchainWithNonUTF8Name(::std::ffi::OsString),
+    ListBlockchainInvalidName(::storage_units::utils::directory_name::DirectoryNameError),
 }
 
 impl From<io::Error> for Error {
@@ -17,3 +17,23 @@ impl From<io::Error> for Error {
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::IoError(_) => write!(f, "I/O Error"),
+
+            Error::NewCannotInitializeBlockchainDirectory(_) => write!(f, "Cannot Initialise the blockchain directory"),
+            Error::ListNoBlockchains => write!(f, "No local blockchains yet"),
+            _ => unimplemented!()
+        }
+    }
+}
+impl error::Error for Error {
+    fn cause(&self) -> Option<& error::Error> {
+        match self {
+            Error::IoError(ref err) => Some(err),
+            _ => unimplemented!()
+        }
+    }
+}

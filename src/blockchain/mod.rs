@@ -8,19 +8,47 @@ pub mod error;
 
 pub use self::error::{Error, Result};
 
-use std::path::PathBuf;
+use std::{self, path::PathBuf, ops::{Deref}, fmt, str::{FromStr}, ffi::OsString};
 
 use exe_common::network::api::BlockRef;
 pub use exe_common::{config::net::{self, Config, Peer, Peers}, network};
 use cardano_storage::{self as storage, tag, Storage, config::{StorageConfig}};
+use storage_units::utils::directory_name::{DirectoryName, DirectoryNameError};
 use cardano::block;
 
 pub const LOCAL_BLOCKCHAIN_TIP_TAG : &'static str = "tip";
 
+pub type BlockchainNameError = DirectoryNameError;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct BlockchainName(DirectoryName);
+impl BlockchainName {
+    pub fn from_os_str(os: OsString) -> ::std::result::Result<Self, DirectoryNameError>
+    {
+        DirectoryName::new(os).map(BlockchainName)
+    }
+}
+impl FromStr for BlockchainName {
+    type Err = <DirectoryName as FromStr>::Err;
+    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        DirectoryName::from_str(s).map(BlockchainName)
+    }
+}
+impl fmt::Display for BlockchainName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { self.0.fmt(f) }
+}
+impl Deref for BlockchainName {
+    type Target = <DirectoryName as Deref>::Target;
+    fn deref(&self) -> &Self::Target { self.0.deref() }
+}
+impl AsRef<str> for BlockchainName {
+    fn as_ref(&self) -> &str { self.0.as_ref() }
+}
+
 /// handy structure to use to manage and orginise a blockchain
 ///
 pub struct Blockchain {
-    pub name: String,
+    pub name: BlockchainName,
     pub dir: PathBuf,
     pub storage_config: StorageConfig,
     pub storage: Storage,
@@ -28,7 +56,7 @@ pub struct Blockchain {
 }
 impl Blockchain {
     /// create the new blockhain with the given setting
-    pub fn new(root_dir: PathBuf, name: String, config: Config) -> Result<Self> {
+    pub fn new(root_dir: PathBuf, name: BlockchainName, config: Config) -> Result<Self> {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
 
@@ -62,7 +90,7 @@ impl Blockchain {
     }
 
     /// load the blockchain
-    pub fn load(root_dir: PathBuf, name: String) -> Self {
+    pub fn load(root_dir: PathBuf, name: BlockchainName) -> Self {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
         let storage = Storage::init(&storage_config).unwrap();

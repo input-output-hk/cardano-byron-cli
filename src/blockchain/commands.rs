@@ -10,7 +10,7 @@ use super::peer;
 use super::Blockchain;
 use super::parse_genesis_data;
 use super::genesis_data;
-use super::{peer, Blockchain, Result, Error};
+use super::{peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{self, block::{RawBlock}};
 
 /// function to create and initialize a given new blockchain
@@ -25,15 +25,15 @@ use cardano::{self, block::{RawBlock}};
 ///
 pub fn new( mut term: Term
           , root_dir: PathBuf
-          , name: String
+          , name: BlockchainName
           , config: Config
           )
     -> Result<()>
 {
-    let blockchain = Blockchain::new(root_dir, name.clone(), config)?;
+    let blockchain = Blockchain::new(root_dir, name, config)?;
     blockchain.save();
 
-    term.success(&format!("local blockchain `{}' created.\n", &name))?;
+    term.success(&format!("local blockchain `{}' created.\n", blockchain.name))?;
 
     Ok(())
 }
@@ -62,8 +62,8 @@ pub fn list( mut term: Term
             term.warn(&format!("unexpected file in blockchains directory: {:?}", entry.path()))?;
             continue;
         }
-        let name = entry.file_name().into_string()
-            .map_err(Error::ListBlockchainWithNonUTF8Name)?;
+        let name = BlockchainName::from_os_str(entry.file_name())
+            .map_err(Error::ListBlockchainInvalidName)?;
 
         let blockchain = Blockchain::load(root_dir.clone(), name);
 
@@ -89,7 +89,7 @@ pub fn list( mut term: Term
 
 pub fn destroy( mut term: Term
               , root_dir: PathBuf
-              , name: String
+              , name: BlockchainName
               )
 {
     let blockchain = Blockchain::load(root_dir, name);
@@ -120,7 +120,7 @@ wallets won't be able to interact with this blockchain.",
 ///
 pub fn remote_add( mut term: Term
                  , root_dir: PathBuf
-                 , name: String
+                 , name: BlockchainName
                  , remote_alias: String
                  , remote_endpoint: String
                  )
@@ -139,7 +139,7 @@ pub fn remote_add( mut term: Term
 ///
 pub fn remote_rm( mut term: Term
                 , root_dir: PathBuf
-                , name: String
+                , name: BlockchainName
                 , remote_alias: String
                 )
 {
@@ -152,7 +152,7 @@ pub fn remote_rm( mut term: Term
 
 pub fn remote_fetch( mut term: Term
                    , root_dir: PathBuf
-                   , name: String
+                   , name: BlockchainName
                    , peers: Vec<String>
                    )
 {
@@ -178,7 +178,7 @@ pub enum RemoteDetail {
 
 pub fn remote_ls( mut term: Term
                 , root_dir: PathBuf
-                , name: String
+                , name: BlockchainName
                 , detailed: RemoteDetail
                 )
 {
@@ -239,7 +239,7 @@ fn format_duration(duration: ::std::time::Duration) -> String {
 
 pub fn log( mut term: Term
           , root_dir: PathBuf
-          , name: String
+          , name: BlockchainName
           , from: Option<String>
           )
 {
@@ -267,7 +267,7 @@ pub fn log( mut term: Term
 
 pub fn forward( mut term: Term
               , root_dir: PathBuf
-              , name: String
+              , name: BlockchainName
               , to: Option<String>
               )
 {
@@ -305,7 +305,7 @@ pub fn forward( mut term: Term
 
 pub fn pull( mut term: Term
            , root_dir: PathBuf
-           , name: String
+           , name: BlockchainName
            )
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
@@ -347,7 +347,7 @@ fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> Ra
 
 pub fn cat( mut term: Term
           , root_dir: PathBuf
-          , name: String
+          , name: BlockchainName
           , hash_str: &str
           , no_parse: bool
           , debug: bool
@@ -373,7 +373,7 @@ pub fn cat( mut term: Term
 
 pub fn status( mut term: Term
          , root_dir: PathBuf
-         , name: String
+         , name: BlockchainName
          )
 {
     let blockchain = Blockchain::load(root_dir, name);
@@ -430,7 +430,7 @@ pub fn status( mut term: Term
 
 pub fn verify_block( mut term: Term
                    , root_dir: PathBuf
-                   , name: String
+                   , name: BlockchainName
                    , hash_str: &str
                    )
 {
@@ -463,7 +463,7 @@ pub fn verify_block( mut term: Term
 
 pub fn verify_chain( mut term: Term
                    , root_dir: PathBuf
-                   , name: String
+                   , name: BlockchainName
                    )
 {
     let blockchain = Blockchain::load(root_dir, name);

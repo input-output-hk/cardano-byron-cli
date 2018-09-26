@@ -160,10 +160,10 @@ fn blockchain_argument_name_definition<'a, 'b>() -> Arg<'a,'b> {
         .help("the blockchain name")
         .required(true)
 }
-fn blockchain_argument_name_match<'a>(matches: &ArgMatches<'a>) -> String {
-    match matches.value_of("BLOCKCHAIN_NAME") {
-        Some(r) => { r.to_owned() },
-        None => { unreachable!() }
+fn blockchain_argument_name_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>) -> blockchain::BlockchainName {
+    match value_t!(matches, "BLOCKCHAIN_NAME", blockchain::BlockchainName) {
+        Ok(r) => { r },
+        Err(err) => { term.fail_with(err) },
     }
 }
 fn blockchain_argument_remote_alias_definition<'a, 'b>() -> Arg<'a,'b> {
@@ -221,32 +221,32 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             blockchain::commands::list(term, root_dir, detailed);
         },
         ("new", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let net_config = blockchain_argument_template_match(&matches);
 
             blockchain::commands::new(term, root_dir, name, net_config);
         },
         ("remote-add", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let alias = blockchain_argument_remote_alias_match(&matches);
             let endpoint = blockchain_argument_remote_endpoint_match(&matches);
 
             blockchain::commands::remote_add(term, root_dir, name, alias, endpoint);
         },
         ("remote-rm", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let alias = blockchain_argument_remote_alias_match(&matches);
 
             blockchain::commands::remote_rm(term, root_dir, name, alias);
         },
         ("remote-fetch", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let peers = values_t!(matches, "BLOCKCHAIN_REMOTE_ALIAS", String).unwrap_or_else(|_| Vec::new());
 
             blockchain::commands::remote_fetch(term, root_dir, name, peers);
         },
         ("remote-ls", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let detailed = if matches.is_present("REMOTE_LS_DETAILED_SHORT") {
                 blockchain::commands::RemoteDetail::Short
             } else if matches.is_present("REMOTE_LS_DETAILED_LOCAL") {
@@ -260,18 +260,18 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             blockchain::commands::remote_ls(term, root_dir, name, detailed);
         },
         ("forward", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let opt_hash = matches.value_of("FORWARD_TO_BLOCK").map(|s| s.to_owned());
 
             blockchain::commands::forward(term, root_dir, name, opt_hash);
         },
         ("pull", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::pull(term, root_dir, name);
         },
         ("cat", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = matches.value_of("HASH_BLOCK").unwrap();
             let no_parse = matches.is_present("BLOCK_NO_PARSE");
             let debug = matches.is_present("DEBUG");
@@ -279,29 +279,29 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             blockchain::commands::cat(term, root_dir, name, hash, no_parse, debug);
         },
         ("status", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::status(term, root_dir, name);
         },
         ("destroy", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::destroy(term, root_dir, name);
         },
         ("log", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = matches.value_of("HASH_BLOCK").map(|s| s.to_owned());
 
             blockchain::commands::log(term, root_dir, name, hash);
         },
         ("verify-block", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = matches.value_of("HASH_BLOCK").unwrap();
 
             blockchain::commands::verify_block(term, root_dir, name, hash);
         },
         ("verify", Some(matches)) => {
-            let name = blockchain_argument_name_match(&matches);
+            let name = blockchain_argument_name_match(&mut term, &matches);
             blockchain::commands::verify_chain(term, root_dir, name);
         },
         _ => {
@@ -608,7 +608,7 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         },
         ("attach", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
-            let blockchain = blockchain_argument_name_match(&matches);
+            let blockchain = blockchain_argument_name_match(&mut term, &matches);
 
             wallet::commands::attach(term, root_dir, name, blockchain);
         },
@@ -833,7 +833,7 @@ fn transaction_argument_output_match<'a>(matches: &ArgMatches<'a>) -> Option<(ca
 fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     match matches.subcommand() {
         ("new", Some(matches)) => {
-            let blockchain = blockchain_argument_name_match(&matches);
+            let blockchain = blockchain_argument_name_match(&mut term, &matches);
             transaction::commands::new(&mut term, root_dir, blockchain)
                 .unwrap_or_else(|e| term.fail_with(e));
         },
@@ -859,7 +859,7 @@ fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: 
         },
         ("send", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            let blockchain = blockchain_argument_name_match(&matches);
+            let blockchain = blockchain_argument_name_match(&mut term, &matches);
 
             transaction::commands::send(&mut term, root_dir, id, blockchain)
                 .unwrap_or_else(|e| term.fail_with(e));
