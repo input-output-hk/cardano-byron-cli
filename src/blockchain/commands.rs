@@ -462,7 +462,7 @@ pub fn verify_chain( mut term: Term
 
     let genesis_data = parse_genesis_data::parse_genesis_data(genesis_data);
 
-    assert!(genesis_data.genesis_prev == blockchain.config.genesis_prev,
+    assert_eq!(genesis_data.genesis_prev, blockchain.config.genesis_prev,
             "Genesis data hash mismatch.");
 
     let mut bad_blocks = 0;
