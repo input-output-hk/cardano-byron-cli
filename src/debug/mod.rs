@@ -1,6 +1,7 @@
-use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}};
-
+use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
 use utils::term::Term;
+use std::io::{self, Read};
+use serde_json;
 
 pub fn command_address( mut term: Term
                       , address: String
@@ -36,4 +37,23 @@ pub fn command_address( mut term: Term
         StakeDistribution::SingleKeyDistr(id) =>
            term.info(&format!("  - stake distribution: {}\n", id)).unwrap(),
     }
+}
+
+/// Read a JSON file from stdin and write its canonicalized form to stdout.
+pub fn canonicalize_json()
+{
+    let mut json = String::new();
+    io::stdin().read_to_string(&mut json).expect("Cannot read stdin.");
+    let data: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let canon_json = data.to_string();
+    //print!("{}", hash::Blake2b256::new(canon_json.as_bytes()));
+    print!("{}", data.to_string());
+}
+
+/// Compute a Blake2b256 hash of the data on stdin.
+pub fn hash()
+{
+    let mut data = vec![];
+    io::stdin().read_to_end(&mut data).expect("Cannot read stdin.");
+    println!("{}", hash::Blake2b256::new(&data));
 }
