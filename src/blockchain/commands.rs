@@ -8,6 +8,8 @@ use utils::term::Term;
 
 use super::peer;
 use super::Blockchain;
+use super::parse_genesis_data;
+use super::genesis_data;
 use cardano::{self, block::{RawBlock}};
 
 /// function to create and initialize a given new blockchain
@@ -455,11 +457,17 @@ pub fn verify_chain( mut term: Term
     let progress = term.progress_bar(num_blocks as u64);
     progress.set_message("verifying blocks... ");
 
+    let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
+        .expect("Could not find genesis data.");
+
+    let genesis_data = parse_genesis_data::parse_genesis_data(genesis_data);
+
+    assert_eq!(genesis_data.genesis_prev, blockchain.config.genesis_prev,
+            "Genesis data hash mismatch.");
+
     let mut bad_blocks = 0;
     let mut nr_blocks = 0;
-    let mut chain_state = cardano::block::ChainState::new(
-        &blockchain.config.genesis_prev,
-        blockchain.config.protocol_magic);
+    let mut chain_state = cardano::block::ChainState::new(&genesis_data);
 
     for res in blockchain.iter_to_tip(blockchain.config.genesis.clone()).unwrap() {
         let (_raw_blk, blk) = res.unwrap();
@@ -470,13 +478,18 @@ pub fn verify_chain( mut term: Term
             Err(err) => {
                 bad_blocks += 1;
                 term.error(&format!("Block {} ({}) is invalid: {:?}", hash, blk.get_header().get_blockdate(), err)).unwrap();
-                term.simply("\n").unwrap();
+                term.simply("\n\n").unwrap();
             }
         }
         progress.inc(1);
     }
 
     progress.finish();
+
+    term.simply(&format!("{} transactions, {} spent outputs, {} unspent outputs\n",
+                         chain_state.nr_transactions,
+                         chain_state.spend_txos,
+                         chain_state.utxos.len())).unwrap();
 
     if bad_blocks > 0 {
         term.error(&format!("{} out of {} blocks are invalid", bad_blocks, nr_blocks)).unwrap();

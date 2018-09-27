@@ -2,6 +2,8 @@ pub mod config;
 pub mod commands;
 pub mod peer;
 pub mod iter;
+pub mod parse_genesis_data;
+pub mod genesis_data;
 
 use std::path::PathBuf;
 

@@ -1038,6 +1038,12 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
 
             debug::command_address(term, address);
         },
+        ("canonicalize-json", Some(_)) => {
+            debug::canonicalize_json();
+        },
+        ("hash", Some(_)) => {
+            debug::hash();
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1062,5 +1068,11 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .value_name("FILE")
                 .required(true)
             )
+        )
+        .subcommand(SubCommand::with_name("canonicalize-json")
+            .about("read a JSON file from stdin and write its canonicalized form to stdout (useful for computing a genesis data hash)")
+        )
+        .subcommand(SubCommand::with_name("hash")
+            .about("compute the Blake2b256 hash of the data on stdin.")
         )
 }
