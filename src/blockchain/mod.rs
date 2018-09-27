@@ -8,7 +8,7 @@ pub mod error;
 
 pub use self::error::{Error, Result};
 
-use std::{self, path::PathBuf, ops::{Deref}, fmt, str::{FromStr}, ffi::OsString};
+use std::{path::PathBuf, ops::{Deref}, fmt, str::{FromStr}, ffi::OsString};
 
 use exe_common::network::api::BlockRef;
 pub use exe_common::{config::net::{self, Config, Peer, Peers}, network};
@@ -20,7 +20,7 @@ pub const LOCAL_BLOCKCHAIN_TIP_TAG : &'static str = "tip";
 
 pub type BlockchainNameError = DirectoryNameError;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockchainName(DirectoryName);
 impl BlockchainName {
     pub fn from_os_str(os: OsString) -> ::std::result::Result<Self, DirectoryNameError>

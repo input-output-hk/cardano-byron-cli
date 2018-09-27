@@ -11,7 +11,7 @@ use super::Blockchain;
 use super::parse_genesis_data;
 use super::genesis_data;
 use super::{peer, Blockchain, Result, Error, BlockchainName};
-use cardano::{self, block::{RawBlock}};
+use cardano::{self, block::{RawBlock, HeaderHash}};
 
 /// function to create and initialize a given new blockchain
 ///
@@ -240,16 +240,14 @@ fn format_duration(duration: ::std::time::Duration) -> String {
 pub fn log( mut term: Term
           , root_dir: PathBuf
           , name: BlockchainName
-          , from: Option<String>
+          , from: Option<HeaderHash>
           )
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    let from = if let Some(hash_hex) = from {
-        let hash = super::config::parse_block_hash(&mut term, &hash_hex);
-
+    let from = if let Some(hash) = from {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_hex)).unwrap();
+            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash)).unwrap();
             ::std::process::exit(1);
         }
 
@@ -268,16 +266,14 @@ pub fn log( mut term: Term
 pub fn forward( mut term: Term
               , root_dir: PathBuf
               , name: BlockchainName
-              , to: Option<String>
+              , to: Option<HeaderHash>
               )
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    let hash = if let Some(hash_hex) = to {
-        let hash = super::config::parse_block_hash(&mut term, &hash_hex);
-
+    let hash = if let Some(hash) = to {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_hex)).unwrap();
+            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash)).unwrap();
             ::std::process::exit(1);
         }
 
@@ -322,12 +318,11 @@ pub fn pull( mut term: Term
     forward(term, root_dir, name, None)
 }
 
-fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> RawBlock
+fn get_block(term: &mut Term, blockchain: &Blockchain, hash: &HeaderHash) -> RawBlock
 {
-    let hash = super::config::parse_block_hash(&mut term, &hash_str);
     let block_location = match storage::block_location(&blockchain.storage, &hash) {
         None => {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_str)).unwrap();
+            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash)).unwrap();
             ::std::process::exit(1);
         },
         Some(loc) => loc
@@ -348,13 +343,13 @@ fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> Ra
 pub fn cat( mut term: Term
           , root_dir: PathBuf
           , name: BlockchainName
-          , hash_str: &str
+          , hash: HeaderHash
           , no_parse: bool
           , debug: bool
           )
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
-    let rblk = get_block(&mut term, &blockchain, hash_str);
+    let rblk = get_block(&mut term, &blockchain, &hash);
 
     if no_parse {
         ::std::io::stdout().write(rblk.as_ref()).unwrap();
@@ -431,12 +426,11 @@ pub fn status( mut term: Term
 pub fn verify_block( mut term: Term
                    , root_dir: PathBuf
                    , name: BlockchainName
-                   , hash_str: &str
+                   , hash: HeaderHash
                    )
 {
     let blockchain = Blockchain::load(root_dir, name);
-    let hash = super::config::parse_block_hash(&mut term, &hash_str);
-    let rblk = get_block(&mut term, &blockchain, hash_str);
+    let rblk = get_block(&mut term, &blockchain, &hash);
     match rblk.decode() {
         Ok(blk) => {
             match cardano::block::verify_block(blockchain.config.protocol_magic, &hash, &blk) {

@@ -212,6 +212,17 @@ fn blockchain_argument_template_match<'a>(matches: &ArgMatches<'a>)
         }
     }
 }
+fn blockchain_argument_headhash_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>, name: &str) -> cardano::block::HeaderHash {
+    match value_t!(matches, name, cardano::block::HeaderHash) {
+        Ok(hh) => hh,
+        Err(err) => { term.fail_with(err) }
+    }
+}
+fn blockchain_argument_opt_headhash_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>, name: &str) -> Option<cardano::block::HeaderHash> {
+    if matches.is_present(name) {
+        Some(blockchain_argument_headhash_match(term, matches, name))
+    } else { None }
+}
 
 fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     match matches.subcommand() {
@@ -261,7 +272,7 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("forward", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let opt_hash = matches.value_of("FORWARD_TO_BLOCK").map(|s| s.to_owned());
+            let opt_hash = blockchain_argument_opt_headhash_match(&mut term, matches, "FORWARD_TO_BLOCK");
 
             blockchain::commands::forward(term, root_dir, name, opt_hash);
         },
@@ -272,7 +283,7 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("cat", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let hash = matches.value_of("HASH_BLOCK").unwrap();
+            let hash = blockchain_argument_headhash_match(&mut term, matches, "HASH_BLOCK");
             let no_parse = matches.is_present("BLOCK_NO_PARSE");
             let debug = matches.is_present("DEBUG");
 
@@ -290,13 +301,13 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("log", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let hash = matches.value_of("HASH_BLOCK").map(|s| s.to_owned());
+            let hash = blockchain_argument_opt_headhash_match(&mut term, matches, "HASH_BLOCK");
 
             blockchain::commands::log(term, root_dir, name, hash);
         },
         ("verify-block", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let hash = matches.value_of("HASH_BLOCK").unwrap();
+            let hash = blockchain_argument_headhash_match(&mut term, matches, "HASH_BLOCK");
 
             blockchain::commands::verify_block(term, root_dir, name, hash);
         },
