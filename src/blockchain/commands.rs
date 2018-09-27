@@ -265,8 +265,7 @@ pub fn forward( term: &mut Term
 
     let hash = if let Some(hash) = to {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash))?;
-            ::std::process::exit(1);
+            return Err(Error::ForwardHashDoesNotExist(hash))
         }
 
         hash
@@ -313,12 +312,11 @@ pub fn pull( term: &mut Term
     forward(term, root_dir, name, None)
 }
 
-fn get_block(term: &mut Term, blockchain: &Blockchain, hash: &HeaderHash) -> RawBlock
+fn get_block(blockchain: &Blockchain, hash: &HeaderHash) -> Result<RawBlock>
 {
     let block_location = match storage::block_location(&blockchain.storage, &hash) {
         None => {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash)).unwrap();
-            ::std::process::exit(1);
+            return Err(Error::GetBlockDoesNotExist(hash.clone()));
         },
         Some(loc) => loc
     };
@@ -329,9 +327,9 @@ fn get_block(term: &mut Term, blockchain: &Blockchain, hash: &HeaderHash) -> Raw
         None        => {
             // this is a bug, we have a block location available for this hash
             // but we were not able to read the block.
-            panic!("the impossible happened, we have a block location of this given block `{}'", hash)
+            return Err(Error::GetInvalidBLock(hash.clone()));
         },
-        Some(rblk) => rblk
+        Some(rblk) => Ok(rblk)
     }
 }
 
@@ -345,7 +343,7 @@ pub fn cat( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
-    let rblk = get_block(term, &blockchain, &hash);
+    let rblk = get_block(&blockchain, &hash)?;
 
     if no_parse {
         ::std::io::stdout().write(rblk.as_ref())?;
@@ -353,7 +351,7 @@ pub fn cat( term: &mut Term
     } else {
         use utils::pretty::Pretty;
 
-        let blk = rblk.decode().unwrap();
+        let blk = rblk.decode().map_err(Error::CatMalformedBlock)?;
         if debug {
             writeln!(term, "{:#?}", blk)?;
         } else {
@@ -372,37 +370,36 @@ pub fn status( term: &mut Term
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    writeln!(term, "Blockchain")?;
-    term.warn("Blockchain:\n").unwrap();
+    writeln!(term, "{}", style!("Blockchain").cyan().bold())?;
     {
         let (tip, _is_genesis) = blockchain.load_tip();
         let tag_path = blockchain.dir.join("tag").join(super::LOCAL_BLOCKCHAIN_TIP_TAG);
-        let metadata = ::std::fs::metadata(tag_path).unwrap();
-        let fetched_date = metadata.modified().unwrap().into();
+        let metadata = ::std::fs::metadata(tag_path)?;
+        let fetched_date = metadata.modified()?.into();
         // get the difference between now and the last fetch, only keep up to the seconds
         let fetched_since = time::Duration::since(fetched_date);
 
-        writeln!(term, " * last forward:    {} ({} ago)", style!(fetched_date), style!(fetched_since))?;
+        writeln!(term, " * last forward:    {} ({} ago)", style!(fetched_date).green(), style!(fetched_since).green())?;
         writeln!(term, " * local tip hash:  {}", style!(tip.hash))?;
         writeln!(term, " * local tip date:  {}", style!(tip.date))?;
     }
 
-    writeln!(term, "Peers:")?;
+    writeln!(term, "{}:", style!("Peers").cyan().bold())?;
     for (idx, np) in blockchain.peers().enumerate() {
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
         let (tip, _is_genesis) = peer.load_local_tip();
 
-        writeln!(term, "{}. {} ({})", style!(idx+1), style!(peer.name), style!(peer.config))?;
+        writeln!(term, "  {}. {} ({})", style!(idx+1), style!(peer.name).cyan(), style!(peer.config).red())?;
 
         let tag_path = blockchain.dir.join("tag").join(&peer.tag);
-        let metadata = ::std::fs::metadata(tag_path).unwrap();
-        let fetched_date = metadata.modified().unwrap().into();
+        let metadata = ::std::fs::metadata(tag_path)?;
+        let fetched_date = metadata.modified()?.into();
         // get the difference between now and the last fetch, only keep up to the seconds
         let fetched_since = time::Duration::since(fetched_date);
 
-        writeln!(term, " * last fetch:      {} ({} ago)", style!(fetched_date), style!(fetched_since))?;
-        writeln!(term, " * local tip hash:  {}", style!(tip.hash))?;
-        writeln!(term, " * local tip date:  {}", style!(tip.date))?;
+        writeln!(term, "   * last fetch:      {} ({} ago)", style!(fetched_date).green(), style!(fetched_since).green())?;
+        writeln!(term, "   * local tip hash:  {}", style!(tip.hash))?;
+        writeln!(term, "   * local tip date:  {}", style!(tip.date))?;
     }
 
     Ok(())
@@ -416,35 +413,28 @@ pub fn verify_block( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
-    let rblk = get_block(term, &blockchain, &hash);
+    let rblk = get_block(&blockchain, &hash)?;
     match rblk.decode() {
         Ok(blk) => {
             match cardano::block::verify_block(blockchain.config.protocol_magic, &hash, &blk) {
                 Ok(()) => {
-                    writeln!(term, "{}", style!("Block is valid").green())?;
+                    Ok(writeln!(term, "{}", style!("Block is valid").green())?)
                 }
                 Err(err) => {
-                    writeln!(term, "{}", style!("Invalid block").red())?;
-                    term.simply(&format!("{:?}", err)).unwrap();
-                    term.simply("\n").unwrap();
-                    ::std::process::exit(1);
+                    Err(Error::VerifyInvalidBlock(err))
                 }
-            };
+            }
         },
         Err(err) => {
-            writeln!(term, "{}", style!("Corrupted block").red())?;
-            term.simply(&format!("{:?}", err)).unwrap();
-            term.simply("\n").unwrap();
-            ::std::process::exit(1);
+            Err(Error::VerifyMalformedBlock(err))
         }
     }
-
-    Ok(())
 }
 
 pub fn verify_chain( term: &mut Term
                    , root_dir: PathBuf
                    , name: BlockchainName
+                   , stop_on_error: bool
                    )
     -> Result<()>
 {
@@ -456,13 +446,16 @@ pub fn verify_chain( term: &mut Term
     let progress = term.progress_bar(num_blocks as u64);
     progress.set_message("verifying blocks... ");
 
-    let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
-        .expect("Could not find genesis data.");
+    let genesis_data = {
+        let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
+            .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
-    let genesis_data = parse_genesis_data::parse_genesis_data(genesis_data);
+        parse_genesis_data::parse_genesis_data(genesis_data)
+    };
 
-    assert_eq!(genesis_data.genesis_prev, blockchain.config.genesis_prev,
-            "Genesis data hash mismatch.");
+    if genesis_data.genesis_prev != blockchain.config.genesis_prev {
+        return Err(Error::VerifyChainInvalidGenesisPrevHash(blockchain.config.genesis_prev, genesis_data.genesis_prev));
+    }
 
     let mut bad_blocks = 0;
     let mut nr_blocks = 0;
@@ -476,8 +469,10 @@ pub fn verify_chain( term: &mut Term
             Ok(()) => {},
             Err(err) => {
                 bad_blocks += 1;
-                term.error(&format!("Block {} ({}) is invalid: {:?}", hash, blk.get_header().get_blockdate(), err)).unwrap();
-                term.simply("\n\n").unwrap();
+                writeln!(term, "Block {} ({}) is invalid", hash, blk.get_header().get_blockdate())?;
+                writeln!(term, "    {:#?}", err)?;
+                writeln!(term, "")?;
+                if stop_on_error { break; }
             }
         }
         progress.inc(1);
@@ -485,19 +480,15 @@ pub fn verify_chain( term: &mut Term
 
     progress.finish();
 
-    term.simply(&format!("{} transactions, {} spent outputs, {} unspent outputs\n",
-                         chain_state.nr_transactions,
-                         chain_state.spend_txos,
-                         chain_state.utxos.len())).unwrap();
+    writeln!(term, "verification finished:")?;
+    writeln!(term, " * {} total blocks", style!(nr_blocks).green().bold())?;
+    writeln!(term, " * {} transactions", style!(chain_state.nr_transactions).green())?;
+    writeln!(term, " * {} spent outputs", style!(chain_state.spend_txos).cyan())?;
+    writeln!(term, " * {} unspent outputs", style!(chain_state.utxos.len()).cyan().bold())?;
 
     if bad_blocks > 0 {
-        term.error(&format!("{} out of {} blocks are invalid", bad_blocks, nr_blocks)).unwrap();
-        term.simply("\n").unwrap();
-        ::std::process::exit(1);
+        Err(Error::BlockchainIsNotValid(bad_blocks))
+    } else {
+        Ok(writeln!(term, "{}", style!("Blockchain is in a valid state").green())?)
     }
-
-    term.success(&format!("All {} blocks are valid", nr_blocks)).unwrap();
-    term.simply("\n").unwrap();
-
-    Ok(())
 }

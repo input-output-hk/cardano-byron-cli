@@ -2,8 +2,6 @@
 //!
 
 use std::path::PathBuf;
-use utils::term::Term;
-use cardano::util::try_from_slice::{TryFromSlice};
 
 /// this is the name of the directory where the blockchains'
 /// blocks, epochs and tags will lie.

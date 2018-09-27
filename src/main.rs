@@ -326,7 +326,9 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("verify", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            blockchain::commands::verify_chain(&mut term, root_dir, name)
+            let stop_on_error = matches.is_present("STOP_FIRST_ERROR");
+
+            blockchain::commands::verify_chain(&mut term, root_dir, name, stop_on_error)
                 .unwrap_or_else(|e| term.fail_with(e));
         },
         _ => {
@@ -457,6 +459,11 @@ fn blockchain_commands_definition<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("verify")
             .about("verify all blocks in the chain")
             .arg(blockchain_argument_name_definition())
+            .arg(Arg::with_name("STOP_FIRST_ERROR")
+                .required(false)
+                .short("werror")
+                .help("stop at the first error it found")
+            )
         )
 }
 

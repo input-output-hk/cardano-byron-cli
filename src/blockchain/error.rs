@@ -1,5 +1,7 @@
 use std::{io, fmt, error};
+use cardano::block::{self, HeaderHash};
 use cardano_storage;
+use cbor_event;
 
 #[derive(Debug)]
 pub enum Error {
@@ -10,6 +12,20 @@ pub enum Error {
     ListNoBlockchains,
     ListPermissionsDenied,
     ListBlockchainInvalidName(::storage_units::utils::directory_name::DirectoryNameError),
+
+    ForwardHashDoesNotExist(HeaderHash),
+
+    GetBlockDoesNotExist(HeaderHash),
+    GetInvalidBLock(HeaderHash),
+
+    CatMalformedBlock(cbor_event::Error),
+
+    VerifyInvalidBlock(block::Error),
+    VerifyMalformedBlock(cbor_event::Error),
+
+    VerifyChainGenesisHashNotFound(HeaderHash),
+    VerifyChainInvalidGenesisPrevHash(HeaderHash, HeaderHash), // (Expected, got)
+    BlockchainIsNotValid(usize),
 }
 
 impl From<io::Error> for Error {
