@@ -18,6 +18,7 @@ extern crate rand;
 #[macro_use]
 extern crate log;
 extern crate humantime;
+extern crate base64;
 
 #[macro_use]
 pub mod utils;

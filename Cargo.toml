@@ -35,6 +35,7 @@ cryptoxide = "0.1"
 exe-common      = { path = "cardano-deps/exe-common" }
 cardano-storage = { path = "cardano-deps/storage" }
 storage-units   = { path = "cardano-deps/storage-units" }
+base64 = "0.9"
 
 [dependencies.clap]
 version = "2.32"

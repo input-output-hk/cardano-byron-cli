@@ -1,7 +1,7 @@
 use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
 use utils::term::Term;
 use std::io::{self, Read};
-use serde_json;
+use super::blockchain::parse_genesis_data;
 
 pub fn command_address( mut term: Term
                       , address: String
@@ -44,13 +44,10 @@ pub fn canonicalize_json()
 {
     let mut json = String::new();
     io::stdin().read_to_string(&mut json).expect("Cannot read stdin.");
-    let data: serde_json::Value = serde_json::from_str(&json).unwrap();
-    let canon_json = data.to_string();
-    //print!("{}", hash::Blake2b256::new(canon_json.as_bytes()));
-    print!("{}", data.to_string());
+    print!("{}", parse_genesis_data::canonicalize_json(&json));
 }
 
-/// Compute a Blake2b256 hash of the data on stdin.
+/// Compute the Blake2b256 hash of the data on stdin.
 pub fn hash()
 {
     let mut data = vec![];
