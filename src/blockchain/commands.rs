@@ -21,7 +21,7 @@ use cardano::{self, block::{RawBlock, HeaderHash}};
 /// the genesis hash of the blockchain (given in the same configuration
 /// structure `Config`).
 ///
-pub fn new( mut term: Term
+pub fn new( term: &mut Term
           , root_dir: PathBuf
           , name: BlockchainName
           , config: Config
@@ -36,7 +36,7 @@ pub fn new( mut term: Term
     Ok(())
 }
 
-pub fn list( mut term: Term
+pub fn list( term: &mut Term
            , root_dir: PathBuf
            , detailed: bool
            )
@@ -84,10 +84,11 @@ pub fn list( mut term: Term
     Ok(())
 }
 
-pub fn destroy( mut term: Term
+pub fn destroy( term: &mut Term
               , root_dir: PathBuf
               , name: BlockchainName
               )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -95,18 +96,19 @@ pub fn destroy( mut term: Term
 This means that all the blocks downloaded will be deleted and that the attached
 wallets won't be able to interact with this blockchain.",
         ::console::style(&blockchain.name).bold().red(),
-    ).unwrap();
+    )?;
 
     let confirmation = ::dialoguer::Confirmation::new("Are you sure?")
         .use_line_input(true)
         .clear(false)
         .default(false)
-        .interact().unwrap();
-    if ! confirmation { ::std::process::exit(0); }
+        .interact()?;
+    if confirmation {
+        unsafe { blockchain.destroy() }?;
+        term.success("blockchain successfully destroyed\n")?;
+    }
 
-    unsafe { blockchain.destroy() }.unwrap();
-
-    term.success("blockchain successfully destroyed\n").unwrap();
+    Ok(())
 }
 
 /// function to add a remote to the given blockchain
@@ -115,18 +117,21 @@ wallets won't be able to interact with this blockchain.",
 /// genesis hash. This is because when add a new peer we don't assume
 /// anything more than the genesis block.
 ///
-pub fn remote_add( mut term: Term
+pub fn remote_add( term: &mut Term
                  , root_dir: PathBuf
                  , name: BlockchainName
                  , remote_alias: String
                  , remote_endpoint: String
                  )
+    -> Result<()>
 {
     let mut blockchain = Blockchain::load(root_dir, name);
     blockchain.add_peer(remote_alias.clone(), remote_endpoint);
     blockchain.save();
 
-    term.success(&format!("remote `{}' node added to blockchain `{}'\n", remote_alias, blockchain.name)).unwrap();
+    term.success(&format!("remote `{}' node added to blockchain `{}'\n", remote_alias, blockchain.name))?;
+
+    Ok(())
 }
 
 /// remove the given peer from the blockchain
@@ -134,36 +139,42 @@ pub fn remote_add( mut term: Term
 /// it will also delete all the metadata associated to this peer
 /// such as the tag pointing to the remote's tip.
 ///
-pub fn remote_rm( mut term: Term
+pub fn remote_rm( term: &mut Term
                 , root_dir: PathBuf
                 , name: BlockchainName
                 , remote_alias: String
                 )
+    -> Result<()>
 {
     let mut blockchain = Blockchain::load(root_dir, name);
     blockchain.remove_peer(remote_alias.clone());
     blockchain.save();
 
-    term.success(&format!("remote `{}' node removed from blockchain `{}'\n", remote_alias, blockchain.name)).unwrap();
+    term.success(&format!("remote `{}' node removed from blockchain `{}'\n", remote_alias, blockchain.name))?;
+
+    Ok(())
 }
 
-pub fn remote_fetch( mut term: Term
+pub fn remote_fetch( term: &mut Term
                    , root_dir: PathBuf
                    , name: BlockchainName
                    , peers: Vec<String>
                    )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
     for np in blockchain.peers() {
         if peers.is_empty() || peers.contains(&np.name().to_owned()) {
-            term.info(&format!("fetching blocks from peer: {}\n", np.name())).unwrap();
+            term.info(&format!("fetching blocks from peer: {}\n", np.name()))?;
 
             let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
 
-            peer.connect(&mut term).unwrap().sync(&mut term);
+            peer.connect(term).unwrap().sync(term);
         }
     }
+
+    Ok(())
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -173,11 +184,12 @@ pub enum RemoteDetail {
     Remote
 }
 
-pub fn remote_ls( mut term: Term
+pub fn remote_ls( term: &mut Term
                 , root_dir: PathBuf
                 , name: BlockchainName
                 , detailed: RemoteDetail
                 )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -236,21 +248,24 @@ pub fn log( term: &mut Term
     for block in storage::block::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
         use utils::pretty::Pretty;
 
-        block.pretty(&mut term, 0).unwrap();
+        block.pretty(term, 0)?;
     }
+
+    Ok(())
 }
 
-pub fn forward( mut term: Term
+pub fn forward( term: &mut Term
               , root_dir: PathBuf
               , name: BlockchainName
               , to: Option<HeaderHash>
               )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
     let hash = if let Some(hash) = to {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash)).unwrap();
+            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash))?;
             ::std::process::exit(1);
         }
 
@@ -271,25 +286,28 @@ pub fn forward( mut term: Term
         tip.hash
     };
 
-    term.success(&format!("forward local tip to: {}\n", hash)).unwrap();
+    term.success(&format!("forward local tip to: {}\n", hash))?;
 
-    blockchain.save_tip(&hash)
+    blockchain.save_tip(&hash);
+
+    Ok(())
 }
 
-pub fn pull( mut term: Term
+pub fn pull( term: &mut Term
            , root_dir: PathBuf
            , name: BlockchainName
            )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
 
     for np in blockchain.peers() {
         if ! np.is_native() { continue; }
-        term.info(&format!("fetching blocks from peer: {}\n", np.name())).unwrap();
+        term.info(&format!("fetching blocks from peer: {}\n", np.name()))?;
 
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
 
-        peer.connect(&mut term).unwrap().sync(&mut term);
+        peer.connect(term).unwrap().sync(term);
     }
 
     forward(term, root_dir, name, None)
@@ -414,18 +432,21 @@ pub fn verify_block( term: &mut Term
             };
         },
         Err(err) => {
-            term.error("Error: ").unwrap();
+            writeln!(term, "{}", style!("Corrupted block").red())?;
             term.simply(&format!("{:?}", err)).unwrap();
             term.simply("\n").unwrap();
             ::std::process::exit(1);
         }
     }
+
+    Ok(())
 }
 
-pub fn verify_chain( mut term: Term
+pub fn verify_chain( term: &mut Term
                    , root_dir: PathBuf
                    , name: BlockchainName
                    )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -477,4 +498,6 @@ pub fn verify_chain( mut term: Term
 
     term.success(&format!("All {} blocks are valid", nr_blocks)).unwrap();
     term.simply("\n").unwrap();
+
+    Ok(())
 }
