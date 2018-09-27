@@ -14,7 +14,7 @@ use cardano::{address::ExtendedAddr, block::{BlockDate}, config::ProtocolMagic, 
 
 use utils::{term::{Term, style::{Style}}};
 
-use blockchain::{Blockchain};
+use blockchain::{Blockchain, BlockchainName};
 
 pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
                                          , wallet: &Wallet
@@ -216,7 +216,7 @@ pub fn create_wallet_state_from_logs<LS>(term: &mut Term, wallet: &Wallet, root_
         Err(lookup_structure) => {
             // create empty state
             // 1. get the wallet's blockchain
-            let blockchain = load_attached_blockchain(term, root_dir, wallet.config.attached_blockchain.clone());
+            let blockchain = load_attached_blockchain(term, root_dir, wallet.config.attached_blockchain().unwrap());
 
             // 2. prepare the wallet state
             let initial_ptr = ptr::StatePtr::new_before_genesis(blockchain.config.genesis.clone());
@@ -288,7 +288,7 @@ pub fn lock_wallet_log(wallet: &Wallet) -> log::LogLock {
     }
 }
 
-pub fn load_attached_blockchain(term: &mut Term, root_dir: PathBuf, name: Option<String>) -> Blockchain {
+pub fn load_attached_blockchain(term: &mut Term, root_dir: PathBuf, name: Option<BlockchainName>) -> Blockchain {
     match name {
         None => {
             term.error("Wallet is not attached to any blockchain\n").unwrap();

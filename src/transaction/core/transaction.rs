@@ -127,7 +127,7 @@ impl Transaction {
             let out = TxOut { address: output.address.clone(), value: output.amount };
             builder.add_output_value(&out);
         }
-        let changes_used = if self.changes.len() == 1 {
+        let changes_used = if self.changes.len() == 1 && (! self.inputs().is_empty()) {
             let fee_algorithm = LinearFee::default();
             builder.add_output_policy(&fee_algorithm, &OutputPolicy::One(self.changes[0].address.clone()))
                 .map_err(Error::ErrorWhenApplyingOutputPolicy)?

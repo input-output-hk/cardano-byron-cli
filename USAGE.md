@@ -218,12 +218,95 @@ cardano-cli wallet status MyWallet
 ## `transaction` build engine
 
 `cardano-cli` provides a simple yet powerful transaction build engine.
-The transaction is built out of the wallet as it does need the wallet
-only for one tiny part of the transaction creation (the signing part).
+The transaction command is detached from the wallet. The wallet is needed
+only for one ~tiny~ part of the transaction creation (the signing part).
 All the preparation or the sending of the transaction to the network
-does not need a wallet at all.
+does not need a wallet. Actually it does not need wallets at all.
 
 This model allows to build transation using funds from different wallets.
+You can then:
+
+* split the bills (asks participants to commit funds to the transactions);
+* allow your accountants to prepare the cheque for you to sign later;
+* ...
+
+### creating a new transaction
+
+When creating a new transaction, you need to specify the blockchain
+you will base your transaction upon. The command will return a unique
+transaction identifier (called a *Staging Id*).
+
+```bash
+STAGING_ID=$(cardano-cli transaction new staging)
+```
+
+### Add outputs
+
+Simply adds the addresses you want to send Ada and specify the amount
+to send (**IN LOVELACE**).
+
+```bash
+cardano-cli transaction add-output ${STAGING_ID} ${ADDRESS} ${VALUE}
+```
+
+### Add a change address
+
+this is the address that will be used to send the left over Ada
+when finalizing the transaction. We currently only support adding
+**1** change address. But this will change soon.
+
+```bash
+cardano-cli transaction add-change ${STAGING_ID} ${MY_CHANGE_ADDRESS}
+```
+
+### Adding inputs to the transaction
+
+There are 2 methods to add inputs to a given transaction, either add it manually:
+
+```bash
+# this command list all the available inputs for this wallet
+cardano-cli wallet utxos ${MY_WALLET_ALIAS}
+
+# then add you inputs as follow:
+cardano-cli transaction ${STAGING_ID} ${TxId} ${Index}
+```
+
+or use the ready to use input select:
+
+```bash
+cardano-cli transation input-select ${STAGING_ID} ${WALLET_ALIAS1} ${WALLET_ALIAS2} # ...
+```
+
+This algorithm will select all the needed inputs from the given wallet(s).
+
+### Finalizing the transation
+
+Finalizing the transaction does one useful action: it rebalance the outputs
+and the change address: all the left over ada will be refunded to the given
+change address.
+
+```bash
+cardano-cli transation finalize ${STAGING_ID}
+```
+
+### Signing and Sending a transaction to the network
+
+Now the transaction is ready, you can sign it then send it:
+
+```bash
+cardano-cli transation sign ${STAGING_ID} ${MY_WALLET}
+```
+
+and to send it, nothing more easy
+
+> **Be careful though**: once it is committed to the blockchain
+> the transaction is not reversible. Check the transaction status
+> before sending it.
+
+```bash
+cardano-cli transation status ${STAGING_ID} ${MY_WALLET}
+cardano-cli transation send ${STAGING_ID} staging
+```
 
 # Commands documentation
 

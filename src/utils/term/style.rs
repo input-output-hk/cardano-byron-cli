@@ -13,8 +13,10 @@ pub use console::{StyledObject};
 
 use super::super::super::transaction;
 use super::super::super::wallet::{WalletName};
+use super::super::super::blockchain::{BlockchainName};
+use utils::time::{Duration, Time};
 
-pub trait Style: Sized {
+pub trait Style : Sized {
     fn style(self) -> StyledObject<Self>;
 }
 
@@ -120,6 +122,26 @@ impl Style for address::StakeholderId {
 impl Style for WalletName {
     fn style(self) -> StyledObject<Self> {
         console::style(self).white()
+    }
+}
+impl Style for BlockchainName {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self).white()
+    }
+}
+impl Style for ::exe_common::config::net::Peer {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self)
+    }
+}
+impl Style for Time {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self)
+    }
+}
+impl Style for Duration {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self)
     }
 }
 

@@ -243,7 +243,7 @@ impl<'a> Peer<'a> {
     /// initialise the connection by performing initial handshake (if necessary).
     pub fn connect(self, term: &mut Term) -> Result<ConnectedPeer<'a>, ()> {
         let peer_handshake = exe_common::network::Peer::new(
-            self.blockchain.name.clone(),
+            self.blockchain.name.as_ref().to_owned(),
             self.name.to_owned(),
             self.config.clone(),
             self.blockchain.config.protocol_magic

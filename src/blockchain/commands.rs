@@ -4,13 +4,12 @@ use std::io::{Write};
 use exe_common::config::net::Config;
 use cardano_storage as storage;
 
-use utils::term::Term;
+use utils::{term::{Term, style::Style}, time};
 
-use super::peer;
-use super::Blockchain;
 use super::parse_genesis_data;
 use super::genesis_data;
-use cardano::{self, block::{RawBlock}};
+use super::{peer, Blockchain, Result, Error, BlockchainName};
+use cardano::{self, block::{RawBlock, HeaderHash}};
 
 /// function to create and initialize a given new blockchain
 ///
@@ -22,58 +21,74 @@ use cardano::{self, block::{RawBlock}};
 /// the genesis hash of the blockchain (given in the same configuration
 /// structure `Config`).
 ///
-pub fn new( mut term: Term
+pub fn new( term: &mut Term
           , root_dir: PathBuf
-          , name: String
+          , name: BlockchainName
           , config: Config
           )
+    -> Result<()>
 {
-    let blockchain = Blockchain::new(root_dir, name.clone(), config);
+    let blockchain = Blockchain::new(root_dir, name, config)?;
     blockchain.save();
 
-    term.success(&format!("local blockchain `{}' created.\n", &name)).unwrap();
+    term.success(&format!("local blockchain `{}' created.\n", blockchain.name))?;
+
+    Ok(())
 }
 
-pub fn list( mut term: Term
+pub fn list( term: &mut Term
            , root_dir: PathBuf
            , detailed: bool
            )
+    -> Result<()>
 {
     let blockchains_dir = super::config::blockchains_directory(&root_dir);
-    for entry in ::std::fs::read_dir(blockchains_dir).unwrap() {
+    let dir_reader = match ::std::fs::read_dir(blockchains_dir) {
+        Err(err) => {
+            use std::io::ErrorKind;
+            return match err.kind() {
+                ErrorKind::NotFound => Err(Error::ListNoBlockchains),
+                ErrorKind::PermissionDenied => Err(Error::ListPermissionsDenied),
+                _  => Err(Error::IoError(err)),
+            }
+        },
+        Ok(dr) => dr
+    };
+    for entry in dir_reader {
         let entry = entry.unwrap();
-        if ! entry.file_type().unwrap().is_dir() {
-            term.warn(&format!("unexpected file in blockchains directory: {:?}", entry.path())).unwrap();
+        if ! entry.file_type()?.is_dir() {
+            term.warn(&format!("unexpected file in blockchains directory: {:?}", entry.path()))?;
             continue;
         }
-        let name = entry.file_name().into_string().unwrap_or_else(|err| {
-            panic!("invalid utf8... {:?}", err)
-        });
+        let name = BlockchainName::from_os_str(entry.file_name())
+            .map_err(Error::ListBlockchainInvalidName)?;
 
         let blockchain = Blockchain::load(root_dir.clone(), name);
 
-        term.info(&blockchain.name).unwrap();
+        term.info(&blockchain.name)?;
         if detailed {
             let (tip, _is_genesis) = blockchain.load_tip();
             let tag_path = blockchain.dir.join("tag").join(super::LOCAL_BLOCKCHAIN_TIP_TAG);
-            let metadata = ::std::fs::metadata(tag_path).unwrap();
-            let now = ::std::time::SystemTime::now();
-            let fetched_date = metadata.modified().unwrap();
-            let fetched_since = ::std::time::Duration::new(now.duration_since(fetched_date).unwrap().as_secs(), 0);
+            let metadata = ::std::fs::metadata(tag_path)?;
+            let fetched_date = metadata.modified()?.into();
+            let fetched_since = time::Duration::since(fetched_date);
 
-            term.simply("\t").unwrap();
-            term.success(&format!("{} ({})", tip.hash, tip.date)).unwrap();
-            term.simply("\t").unwrap();
-            term.warn(&format!("(updated {} ago)", format_duration(fetched_since))).unwrap();
+            term.simply("\t")?;
+            term.success(&format!("{} ({})", tip.hash, tip.date))?;
+            term.simply("\t")?;
+            term.warn(&format!("(updated {} ago)", style!(fetched_since)))?;
         }
-        term.simply("\n").unwrap();
+        term.simply("\n")?;
     }
+
+    Ok(())
 }
 
-pub fn destroy( mut term: Term
+pub fn destroy( term: &mut Term
               , root_dir: PathBuf
-              , name: String
+              , name: BlockchainName
               )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -81,18 +96,19 @@ pub fn destroy( mut term: Term
 This means that all the blocks downloaded will be deleted and that the attached
 wallets won't be able to interact with this blockchain.",
         ::console::style(&blockchain.name).bold().red(),
-    ).unwrap();
+    )?;
 
     let confirmation = ::dialoguer::Confirmation::new("Are you sure?")
         .use_line_input(true)
         .clear(false)
         .default(false)
-        .interact().unwrap();
-    if ! confirmation { ::std::process::exit(0); }
+        .interact()?;
+    if confirmation {
+        unsafe { blockchain.destroy() }?;
+        term.success("blockchain successfully destroyed\n")?;
+    }
 
-    unsafe { blockchain.destroy() }.unwrap();
-
-    term.success("blockchain successfully destroyed\n").unwrap();
+    Ok(())
 }
 
 /// function to add a remote to the given blockchain
@@ -101,18 +117,21 @@ wallets won't be able to interact with this blockchain.",
 /// genesis hash. This is because when add a new peer we don't assume
 /// anything more than the genesis block.
 ///
-pub fn remote_add( mut term: Term
+pub fn remote_add( term: &mut Term
                  , root_dir: PathBuf
-                 , name: String
+                 , name: BlockchainName
                  , remote_alias: String
                  , remote_endpoint: String
                  )
+    -> Result<()>
 {
     let mut blockchain = Blockchain::load(root_dir, name);
     blockchain.add_peer(remote_alias.clone(), remote_endpoint);
     blockchain.save();
 
-    term.success(&format!("remote `{}' node added to blockchain `{}'\n", remote_alias, blockchain.name)).unwrap();
+    term.success(&format!("remote `{}' node added to blockchain `{}'\n", remote_alias, blockchain.name))?;
+
+    Ok(())
 }
 
 /// remove the given peer from the blockchain
@@ -120,36 +139,42 @@ pub fn remote_add( mut term: Term
 /// it will also delete all the metadata associated to this peer
 /// such as the tag pointing to the remote's tip.
 ///
-pub fn remote_rm( mut term: Term
+pub fn remote_rm( term: &mut Term
                 , root_dir: PathBuf
-                , name: String
+                , name: BlockchainName
                 , remote_alias: String
                 )
+    -> Result<()>
 {
     let mut blockchain = Blockchain::load(root_dir, name);
     blockchain.remove_peer(remote_alias.clone());
     blockchain.save();
 
-    term.success(&format!("remote `{}' node removed from blockchain `{}'\n", remote_alias, blockchain.name)).unwrap();
+    term.success(&format!("remote `{}' node removed from blockchain `{}'\n", remote_alias, blockchain.name))?;
+
+    Ok(())
 }
 
-pub fn remote_fetch( mut term: Term
+pub fn remote_fetch( term: &mut Term
                    , root_dir: PathBuf
-                   , name: String
+                   , name: BlockchainName
                    , peers: Vec<String>
                    )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
     for np in blockchain.peers() {
         if peers.is_empty() || peers.contains(&np.name().to_owned()) {
-            term.info(&format!("fetching blocks from peer: {}\n", np.name())).unwrap();
+            term.info(&format!("fetching blocks from peer: {}\n", np.name()))?;
 
             let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
 
-            peer.connect(&mut term).unwrap().sync(&mut term);
+            peer.connect(term).unwrap().sync(term);
         }
     }
+
+    Ok(())
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -159,11 +184,12 @@ pub enum RemoteDetail {
     Remote
 }
 
-pub fn remote_ls( mut term: Term
+pub fn remote_ls( term: &mut Term
                 , root_dir: PathBuf
-                , name: String
+                , name: BlockchainName
                 , detailed: RemoteDetail
                 )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -171,68 +197,46 @@ pub fn remote_ls( mut term: Term
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
         let (tip, _is_genesis) = peer.load_local_tip();
 
-        term.info(&format!("{}", peer.name)).unwrap();
-        term.simply(" (").unwrap();
-        term.success(&format!("{}", peer.config)).unwrap();
-        term.simply(")\n").unwrap();
+        writeln!(term, "{} ({})", style!(&peer.name), style!(&peer.config))?;
 
         if detailed >= RemoteDetail::Local {
             let tag_path = blockchain.dir.join("tag").join(&peer.tag);
             let metadata = ::std::fs::metadata(tag_path).unwrap();
-            let now = ::std::time::SystemTime::now();
-            let fetched_date = metadata.modified().unwrap();
+            let fetched_date = metadata.modified()?.into();
             // get the difference between now and the last fetch, only keep up to the seconds
-            let fetched_since = ::std::time::Duration::new(now.duration_since(fetched_date).unwrap().as_secs(), 0);
+            let fetched_since = time::Duration::since(fetched_date);
 
-            term.simply(" * last fetch:      ").unwrap();
-            term.info(&format!("{} ({} ago)", format_systemtime(fetched_date), format_duration(fetched_since))).unwrap();
-            term.simply("\n").unwrap();
-            term.simply(" * local tip hash:  ").unwrap();
-            term.success(&format!("{}", tip.hash)).unwrap();
-            term.simply("\n").unwrap();
-            term.simply(" * local tip date:  ").unwrap();
-            term.success(&format!("{}", tip.date)).unwrap();
-            term.simply("\n").unwrap();
+            writeln!(term, " * last fetch:      {} ({} ago)", style!(fetched_date), style!(fetched_since))?;
+            writeln!(term, " * local tip hash:  {}", style!(tip.hash))?;
+            writeln!(term, " * local tip date:  {}", style!(tip.date))?;
 
             if detailed >= RemoteDetail::Remote {
-                let mut connected_peer = peer.connect(&mut term).unwrap();
+                let mut connected_peer = peer.connect(term).unwrap();
                 let remote_tip = connected_peer.query_tip();
                 let block_diff = remote_tip.date - tip.date;
 
-                term.simply(" * remote tip hash: ").unwrap();
-                term.warn(&format!("{}", remote_tip.hash)).unwrap();
-                term.simply("\n").unwrap();
-                term.simply(" * remote tip date: ").unwrap();
-                term.warn(&format!("{}", remote_tip.date)).unwrap();
-                term.simply("\n").unwrap();
-                term.simply(" * local is ").unwrap();
-                term.warn(&format!("{}", block_diff)).unwrap();
-                term.simply(" blocks behind remote\n").unwrap();
+                writeln!(term, " * remote tip hash: {}", style!(remote_tip.hash))?;
+                writeln!(term, " * remote tip date: {}", style!(remote_tip.date))?;
+                writeln!(term, " * local is {} behind remote", style!(block_diff).red())?;
             }
         }
     }
+
+    Ok(())
 }
 
-fn format_systemtime(time: ::std::time::SystemTime) -> String {
-    format!("{}", ::humantime::format_rfc3339(time)).chars().take(10).collect()
-}
-fn format_duration(duration: ::std::time::Duration) -> String {
-    format!("{}", ::humantime::format_duration(duration))
-}
-
-pub fn log( mut term: Term
+pub fn log( term: &mut Term
           , root_dir: PathBuf
-          , name: String
-          , from: Option<String>
+          , name: BlockchainName
+          , from: Option<HeaderHash>
           )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    let from = if let Some(hash_hex) = from {
-        let hash = super::config::parse_block_hash(&mut term, &hash_hex);
-
+    let from = if let Some(hash) = from {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_hex)).unwrap();
+            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash))?;
             ::std::process::exit(1);
         }
 
@@ -244,24 +248,24 @@ pub fn log( mut term: Term
     for block in storage::block::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
         use utils::pretty::Pretty;
 
-        block.pretty(&mut term, 0).unwrap();
+        block.pretty(term, 0)?;
     }
+
+    Ok(())
 }
 
-pub fn forward( mut term: Term
+pub fn forward( term: &mut Term
               , root_dir: PathBuf
-              , name: String
-              , to: Option<String>
+              , name: BlockchainName
+              , to: Option<HeaderHash>
               )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    let hash = if let Some(hash_hex) = to {
-        let hash = super::config::parse_block_hash(&mut term, &hash_hex);
-
+    let hash = if let Some(hash) = to {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_hex)).unwrap();
-            ::std::process::exit(1);
+            return Err(Error::ForwardHashDoesNotExist(hash))
         }
 
         hash
@@ -281,37 +285,38 @@ pub fn forward( mut term: Term
         tip.hash
     };
 
-    term.success(&format!("forward local tip to: {}\n", hash)).unwrap();
+    term.success(&format!("forward local tip to: {}\n", hash))?;
 
-    blockchain.save_tip(&hash)
+    blockchain.save_tip(&hash);
+
+    Ok(())
 }
 
-pub fn pull( mut term: Term
+pub fn pull( term: &mut Term
            , root_dir: PathBuf
-           , name: String
+           , name: BlockchainName
            )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
 
     for np in blockchain.peers() {
         if ! np.is_native() { continue; }
-        term.info(&format!("fetching blocks from peer: {}\n", np.name())).unwrap();
+        term.info(&format!("fetching blocks from peer: {}\n", np.name()))?;
 
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
 
-        peer.connect(&mut term).unwrap().sync(&mut term);
+        peer.connect(term).unwrap().sync(term);
     }
 
     forward(term, root_dir, name, None)
 }
 
-fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> RawBlock
+fn get_block(blockchain: &Blockchain, hash: &HeaderHash) -> Result<RawBlock>
 {
-    let hash = super::config::parse_block_hash(&mut term, &hash_str);
     let block_location = match storage::block_location(&blockchain.storage, &hash) {
         None => {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash_str)).unwrap();
-            ::std::process::exit(1);
+            return Err(Error::GetBlockDoesNotExist(hash.clone()));
         },
         Some(loc) => loc
     };
@@ -322,132 +327,116 @@ fn get_block(mut term: &mut Term, blockchain: &Blockchain, hash_str: &str) -> Ra
         None        => {
             // this is a bug, we have a block location available for this hash
             // but we were not able to read the block.
-            panic!("the impossible happened, we have a block location of this given block `{}'", hash)
+            return Err(Error::GetInvalidBLock(hash.clone()));
         },
-        Some(rblk) => rblk
+        Some(rblk) => Ok(rblk)
     }
 }
 
-pub fn cat( mut term: Term
+pub fn cat( term: &mut Term
           , root_dir: PathBuf
-          , name: String
-          , hash_str: &str
+          , name: BlockchainName
+          , hash: HeaderHash
           , no_parse: bool
           , debug: bool
           )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone());
-    let rblk = get_block(&mut term, &blockchain, hash_str);
+    let rblk = get_block(&blockchain, &hash)?;
 
     if no_parse {
-        ::std::io::stdout().write(rblk.as_ref()).unwrap();
-        ::std::io::stdout().flush().unwrap();
+        ::std::io::stdout().write(rblk.as_ref())?;
+        ::std::io::stdout().flush()?;
     } else {
         use utils::pretty::Pretty;
 
-        let blk = rblk.decode().unwrap();
+        let blk = rblk.decode().map_err(Error::CatMalformedBlock)?;
         if debug {
-            writeln!(term, "{:#?}", blk).unwrap();
+            writeln!(term, "{:#?}", blk)?;
         } else {
-            blk.pretty(&mut term, 0).unwrap();
+            blk.pretty(term, 0)?;
         }
     }
+
+    Ok(())
 }
 
-pub fn status( mut term: Term
-         , root_dir: PathBuf
-         , name: String
-         )
+pub fn status( term: &mut Term
+             , root_dir: PathBuf
+             , name: BlockchainName
+             )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
-    term.warn("Blockchain:\n").unwrap();
+    writeln!(term, "{}", style!("Blockchain").cyan().bold())?;
     {
         let (tip, _is_genesis) = blockchain.load_tip();
         let tag_path = blockchain.dir.join("tag").join(super::LOCAL_BLOCKCHAIN_TIP_TAG);
-        let metadata = ::std::fs::metadata(tag_path).unwrap();
-        let now = ::std::time::SystemTime::now();
-        let fetched_date = metadata.modified().unwrap();
+        let metadata = ::std::fs::metadata(tag_path)?;
+        let fetched_date = metadata.modified()?.into();
         // get the difference between now and the last fetch, only keep up to the seconds
-        let fetched_since = ::std::time::Duration::new(now.duration_since(fetched_date).unwrap().as_secs(), 0);
+        let fetched_since = time::Duration::since(fetched_date);
 
-        term.simply("   * last forward:    ").unwrap();
-        term.info(&format!("{} ({} ago)", format_systemtime(fetched_date), format_duration(fetched_since))).unwrap();
-        term.simply("\n").unwrap();
-        term.simply("   * local tip hash:  ").unwrap();
-        term.success(&format!("{}", tip.hash)).unwrap();
-        term.simply("\n").unwrap();
-        term.simply("   * local tip date:  ").unwrap();
-        term.success(&format!("{}", tip.date)).unwrap();
-        term.simply("\n").unwrap();
+        writeln!(term, " * last forward:    {} ({} ago)", style!(fetched_date).green(), style!(fetched_since).green())?;
+        writeln!(term, " * local tip hash:  {}", style!(tip.hash))?;
+        writeln!(term, " * local tip date:  {}", style!(tip.date))?;
     }
 
-    term.warn("Peers:\n").unwrap();
+    writeln!(term, "{}:", style!("Peers").cyan().bold())?;
     for (idx, np) in blockchain.peers().enumerate() {
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
         let (tip, _is_genesis) = peer.load_local_tip();
 
-        term.info(&format!(" {}. {}", idx + 1, peer.name)).unwrap();
-        term.simply(" (").unwrap();
-        term.success(&format!("{}", peer.config)).unwrap();
-        term.simply(")\n").unwrap();
+        writeln!(term, "  {}. {} ({})", style!(idx+1), style!(peer.name).cyan(), style!(peer.config).red())?;
 
         let tag_path = blockchain.dir.join("tag").join(&peer.tag);
-        let metadata = ::std::fs::metadata(tag_path).unwrap();
-        let now = ::std::time::SystemTime::now();
-        let fetched_date = metadata.modified().unwrap();
+        let metadata = ::std::fs::metadata(tag_path)?;
+        let fetched_date = metadata.modified()?.into();
         // get the difference between now and the last fetch, only keep up to the seconds
-        let fetched_since = ::std::time::Duration::new(now.duration_since(fetched_date).unwrap().as_secs(), 0);
+        let fetched_since = time::Duration::since(fetched_date);
 
-        term.simply("     * last fetch:      ").unwrap();
-        term.info(&format!("{} ({} ago)", format_systemtime(fetched_date), format_duration(fetched_since))).unwrap();
-        term.simply("\n").unwrap();
-        term.simply("     * local tip hash:  ").unwrap();
-        term.success(&format!("{}", tip.hash)).unwrap();
-        term.simply("\n").unwrap();
-        term.simply("     * local tip date:  ").unwrap();
-        term.success(&format!("{}", tip.date)).unwrap();
-        term.simply("\n").unwrap();
+        writeln!(term, "   * last fetch:      {} ({} ago)", style!(fetched_date).green(), style!(fetched_since).green())?;
+        writeln!(term, "   * local tip hash:  {}", style!(tip.hash))?;
+        writeln!(term, "   * local tip date:  {}", style!(tip.date))?;
     }
+
+    Ok(())
 }
 
-pub fn verify_block( mut term: Term
+pub fn verify_block( term: &mut Term
                    , root_dir: PathBuf
-                   , name: String
-                   , hash_str: &str
+                   , name: BlockchainName
+                   , hash: HeaderHash
                    )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
-    let hash = super::config::parse_block_hash(&mut term, &hash_str);
-    let rblk = get_block(&mut term, &blockchain, hash_str);
+    let rblk = get_block(&blockchain, &hash)?;
     match rblk.decode() {
         Ok(blk) => {
             match cardano::block::verify_block(blockchain.config.protocol_magic, &hash, &blk) {
                 Ok(()) => {
-                    term.success("Ok").unwrap();
-                    term.simply("\n").unwrap();
+                    Ok(writeln!(term, "{}", style!("Block is valid").green())?)
                 }
                 Err(err) => {
-                    term.error("Error: ").unwrap();
-                    term.simply(&format!("{:?}", err)).unwrap();
-                    term.simply("\n").unwrap();
-                    ::std::process::exit(1);
+                    Err(Error::VerifyInvalidBlock(err))
                 }
-            };
+            }
         },
         Err(err) => {
-            term.error("Error: ").unwrap();
-            term.simply(&format!("{:?}", err)).unwrap();
-            term.simply("\n").unwrap();
-            ::std::process::exit(1);
+            Err(Error::VerifyMalformedBlock(err))
         }
     }
 }
 
-pub fn verify_chain( mut term: Term
+pub fn verify_chain( term: &mut Term
                    , root_dir: PathBuf
-                   , name: String
+                   , name: BlockchainName
+                   , stop_on_error: bool
                    )
+    -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name);
 
@@ -457,13 +446,16 @@ pub fn verify_chain( mut term: Term
     let progress = term.progress_bar(num_blocks as u64);
     progress.set_message("verifying blocks... ");
 
-    let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
-        .expect("Could not find genesis data.");
+    let genesis_data = {
+        let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
+            .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
-    let genesis_data = parse_genesis_data::parse_genesis_data(genesis_data);
+        parse_genesis_data::parse_genesis_data(genesis_data)
+    };
 
-    assert_eq!(genesis_data.genesis_prev, blockchain.config.genesis_prev,
-            "Genesis data hash mismatch.");
+    if genesis_data.genesis_prev != blockchain.config.genesis_prev {
+        return Err(Error::VerifyChainInvalidGenesisPrevHash(blockchain.config.genesis_prev, genesis_data.genesis_prev));
+    }
 
     let mut bad_blocks = 0;
     let mut nr_blocks = 0;
@@ -477,8 +469,10 @@ pub fn verify_chain( mut term: Term
             Ok(()) => {},
             Err(err) => {
                 bad_blocks += 1;
-                term.error(&format!("Block {} ({}) is invalid: {:?}", hash, blk.get_header().get_blockdate(), err)).unwrap();
-                term.simply("\n\n").unwrap();
+                writeln!(term, "Block {} ({}) is invalid", hash, blk.get_header().get_blockdate())?;
+                writeln!(term, "    {:#?}", err)?;
+                writeln!(term, "")?;
+                if stop_on_error { break; }
             }
         }
         progress.inc(1);
@@ -486,17 +480,15 @@ pub fn verify_chain( mut term: Term
 
     progress.finish();
 
-    term.simply(&format!("{} transactions, {} spent outputs, {} unspent outputs\n",
-                         chain_state.nr_transactions,
-                         chain_state.spend_txos,
-                         chain_state.utxos.len())).unwrap();
+    writeln!(term, "verification finished:")?;
+    writeln!(term, " * {} total blocks", style!(nr_blocks).green().bold())?;
+    writeln!(term, " * {} transactions", style!(chain_state.nr_transactions).green())?;
+    writeln!(term, " * {} spent outputs", style!(chain_state.spend_txos).cyan())?;
+    writeln!(term, " * {} unspent outputs", style!(chain_state.utxos.len()).cyan().bold())?;
 
     if bad_blocks > 0 {
-        term.error(&format!("{} out of {} blocks are invalid", bad_blocks, nr_blocks)).unwrap();
-        term.simply("\n").unwrap();
-        ::std::process::exit(1);
+        Err(Error::BlockchainIsNotValid(bad_blocks))
+    } else {
+        Ok(writeln!(term, "{}", style!("Blockchain is in a valid state").green())?)
     }
-
-    term.success(&format!("All {} blocks are valid", nr_blocks)).unwrap();
-    term.simply("\n").unwrap();
 }

@@ -9,7 +9,7 @@ use rand::random;
 
 use utils::{term::{Term, style::{Style}}, prompt};
 
-use blockchain::{self, Blockchain};
+use blockchain::{self, Blockchain, BlockchainName};
 
 pub fn list( mut term: Term
            , root_dir: PathBuf
@@ -26,7 +26,7 @@ pub fn list( mut term: Term
 
                 format!("\t{}\t{}@{}",
                     style!(total).green().bold(),
-                    style!(blk_name.as_str()).underlined().white(),
+                    style!(blk_name).underlined().white(),
                     style!(state.ptr.latest_block_date())
                 )
             } else {
@@ -196,7 +196,7 @@ new transactions will be by recovering the wallet with the mnemonic words.",
 pub fn attach( mut term: Term
              , root_dir: PathBuf
              , name: WalletName
-             , blockchain_name: String
+             , blockchain_name: BlockchainName
              )
 {
     // load the wallet
@@ -218,7 +218,7 @@ pub fn attach( mut term: Term
     let _ = Blockchain::load(root_dir, blockchain_name.clone());
 
     // 3. save the attached wallet
-    wallet.config.attached_blockchain = Some(blockchain_name);
+    wallet.config.attached_blockchain = Some(blockchain_name.as_ref().to_owned());
     wallet.save();
 
     term.success("Wallet successfully attached to blockchain.\n").unwrap()
@@ -232,15 +232,19 @@ pub fn detach( mut term: Term
     // load the wallet
     let mut wallet = Wallet::load(root_dir.clone(), name);
 
+    let blockchainname = wallet.config.attached_blockchain().unwrap();
+
     // 1. get the wallet's blockchain
     let _ = load_attached_blockchain(
         &mut term,
         root_dir,
-        ::std::mem::replace(&mut wallet.config.attached_blockchain, None)
+        blockchainname
     );
 
     // 2. delete the wallet log
     wallet.delete_log().unwrap_or_else(|e| term.fail_with(e));
+
+    wallet.config.attached_blockchain = None;
 
     wallet.save();
 
@@ -322,8 +326,10 @@ pub fn sync( mut term: Term
     // 0. load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
+    let blockchainname = wallet.config.attached_blockchain().unwrap();
+
     // 1. get the wallet's blockchain
-    let blockchain = load_attached_blockchain(&mut term, root_dir.clone(), wallet.config.attached_blockchain.clone());
+    let blockchain = load_attached_blockchain(&mut term, root_dir.clone(), blockchainname);
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
