@@ -189,12 +189,17 @@ fn blockchain_argument_remote_endpoint_match<'a>(matches: &ArgMatches<'a>) -> St
     }
 }
 fn blockchain_argument_template_definition<'a, 'b>() -> Arg<'a, 'b> {
+    #[cfg(debug_assertions)]
+    const AVAILABLE_TEMPLATES : &'static [&'static str] = &[ "mainnet", "staging", "testnet" ];
+    #[cfg(not(debug_assertions))]
+    const AVAILABLE_TEMPLATES : &'static [&'static str] = &[ "mainnet", "staging" ];
+
     Arg::with_name("BLOCKCHAIN_TEMPLATE")
         .long("template")
         .value_name("TEMPLATE")
         .help("the template for the new blockchain")
         .required(false)
-        .possible_values(&["mainnet", "staging", "testnet"])
+        .possible_values(AVAILABLE_TEMPLATES)
         .default_value("mainnet")
 }
 fn blockchain_argument_template_match<'a>(matches: &ArgMatches<'a>)
