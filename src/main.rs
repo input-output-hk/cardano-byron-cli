@@ -17,10 +17,20 @@ use clap::{Arg, App, SubCommand, ArgMatches};
 fn main() {
     let default_root_dir = get_default_root_dir();
 
+    let commit_hash : &'static str = option_env!("TRAVIS_COMMIT")
+        .or_else(|| option_env!("APPVEYOR_REPO_COMMIT"))
+        .unwrap_or("<not in release environment>");
+
     let matches = App::new(crate_name!())
         .version(crate_version!())
+        .long_version(format!(
+"version: {}
+commit: {}
+", crate_version!(), commit_hash).as_str()
+)
         .author(crate_authors!())
-        .about(crate_description!())
+        .about("The Cardano Command Line Interface")
+        .after_help(crate_description!())
 
         .arg(global_verbose_definition())
         .arg(global_quiet_definition())
