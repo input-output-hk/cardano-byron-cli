@@ -249,7 +249,7 @@ pub fn log( term: &mut Term
         use utils::pretty::Pretty;
 
         writeln!(term, "[");
-        block.pretty(term, 0)?;
+        block.pretty(term, 2*::utils::pretty::DISPLAY_INDENT_SIZE)?;
         writeln!(term, "]");
     }
 
@@ -357,9 +357,9 @@ pub fn cat( term: &mut Term
         if debug {
             writeln!(term, "{:#?}", blk)?;
         } else {
-            writeln!(term, "[");
-            blk.pretty(term, 0)?;
-            writeln!(term, "]");
+            write!(term, "[");
+            blk.pretty(term, 2*::utils::pretty::DISPLAY_INDENT_SIZE)?;
+            writeln!(term, "\n]");
         }
     }
 
