@@ -248,7 +248,9 @@ pub fn log( term: &mut Term
     for block in storage::block::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
         use utils::pretty::Pretty;
 
+        writeln!(term, "[");
         block.pretty(term, 0)?;
+        writeln!(term, "]");
     }
 
     Ok(())
@@ -355,7 +357,9 @@ pub fn cat( term: &mut Term
         if debug {
             writeln!(term, "{:#?}", blk)?;
         } else {
+            writeln!(term, "[");
             blk.pretty(term, 0)?;
+            writeln!(term, "]");
         }
     }
 
