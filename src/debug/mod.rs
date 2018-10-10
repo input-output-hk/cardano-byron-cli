@@ -1,7 +1,7 @@
 use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
 use utils::term::Term;
 use std::io::{self, Read};
-use super::blockchain::parse_genesis_data;
+use exe_common::parse_genesis_data;
 
 pub fn command_address( mut term: Term
                       , address: String
