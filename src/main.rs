@@ -1094,6 +1094,9 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("hash", Some(_)) => {
             debug::hash();
         },
+        ("decode-utxos", Some(_)) => {
+            debug::decode_utxos();
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1124,5 +1127,8 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("hash")
             .about("compute the Blake2b256 hash of the data on stdin.")
+        )
+        .subcommand(SubCommand::with_name("decode-utxos")
+            .about("decode and dump a UTXO delta file")
         )
 }
