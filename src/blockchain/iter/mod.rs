@@ -88,7 +88,6 @@ impl<'a> Iter<'a> {
                     *from.clone(),
                     *to.clone()
                 ).unwrap(); // TODO
-                range.next();
                 IteratorType::Loose(storage, range)
             },
             Some(location) => {
