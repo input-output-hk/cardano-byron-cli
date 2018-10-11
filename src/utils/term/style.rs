@@ -49,7 +49,7 @@ impl Style for BlockDate {
             .bold()
     }
 }
-impl Style for block::genesis::BodyProof {
+impl Style for block::boundary::BodyProof {
     fn style(self) -> StyledObject<Self> {
         console::style(self).yellow()
     }

@@ -64,7 +64,7 @@ dependencies = [
 name = "cardano"
 version = "0.1.0"
 dependencies = [
- "cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cryptoxide 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.78 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -77,7 +77,7 @@ dependencies = [
  "base64 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cardano 0.1.0",
  "cardano-storage 0.1.0",
- "cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cryptoxide 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -101,15 +101,15 @@ name = "cardano-storage"
 version = "0.1.0"
 dependencies = [
  "cardano 0.1.0",
- "cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-units 0.1.0",
 ]
 
 [[package]]
 name = "cbor_event"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -240,12 +240,12 @@ dependencies = [
  "base64 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cardano 0.1.0",
  "cardano-storage 0.1.0",
- "cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.11.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "protocol 0.1.0",
- "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -543,7 +543,7 @@ name = "protocol"
 version = "0.1.0"
 dependencies = [
  "cardano 0.1.0",
- "cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1205,7 +1205,7 @@ dependencies = [
 "checksum bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "228047a76f468627ca71776ecdebd732a3423081fcf5125585bcd7c49886ce12"
 "checksum byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "90492c5858dd7d2e78691cfb89f90d273a2800fc11d98f60786e5d87e2f83781"
 "checksum bytes 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0ce55bd354b095246fc34caf4e9e242f5297a7fd938b090cadfea6eee614aa62"
-"checksum cbor_event 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "29a95a1de12d1f5a3ff0c34cd2578f625a5feddb5d5672546ebbbecdb6287a0f"
+"checksum cbor_event 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fd1877f29511f8bbca55667b55e29e8d4ed80729155c9c9236d99bc340282a6f"
 "checksum cfg-if 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "0c4e7bb64a8ebb0d856483e1e682ea3422f883c5f5615a90d51a2c82fe87fdd3"
 "checksum clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b957d88f4b6a63b9d70d5f454ac8011819c6efa7727858f458ab71c756ce2d3e"
 "checksum clicolors-control 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1f84dec9bc083ce2503908cd305af98bd363da6f54bf8d4bf0ac14ee749ad5d1"

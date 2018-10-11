@@ -77,7 +77,7 @@ impl<A: serde::Serialize> Log<A> {
         writer.write_all(b"EVT1")?;
         writer.write_all(ptr.latest_known_hash.as_ref())?;
         match date {
-            BlockDate::Genesis(i) => {
+            BlockDate::Boundary(i) => {
                 serialize::utils::write_u64(&mut writer, i as u64)?;
                 serialize::utils::write_u64(&mut writer, u64::max_value())?;
             },
@@ -133,7 +133,7 @@ impl<A> Log<A>
 
             let hh = HeaderHash::from(hash);
             let bd = if slot == 0xFFFFFFFFFFFFFFFF {
-                BlockDate::Genesis(gen as u64)
+                BlockDate::Boundary(gen as u64)
             } else {
                 BlockDate::Normal(EpochSlotId { epoch: gen as u64, slotid: slot as u16 })
             };

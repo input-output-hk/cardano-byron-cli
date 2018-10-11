@@ -1,6 +1,6 @@
 use std::{io::{Write, Result}};
 
-use cardano::block::{genesis, normal, types, Block};
+use cardano::block::{boundary, normal, types, Block};
 use cardano::{address, tx};
 
 use super::term::style::{Style, StyledObject};
@@ -76,12 +76,12 @@ impl Pretty for Block {
         where W: Write
     {
         match self {
-            Block::GenesisBlock(blk) => blk.pretty(f, indent),
+            Block::BoundaryBlock(blk) => blk.pretty(f, indent),
             Block::MainBlock(blk) => blk.pretty(f, indent),
         }
     }
 }
-impl Pretty for genesis::Block {
+impl Pretty for boundary::Block {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
         where W: Write
     {
@@ -101,7 +101,7 @@ impl Pretty for normal::Block {
         Ok(())
     }
 }
-impl Pretty for genesis::Body {
+impl Pretty for boundary::Body {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
         where W: Write
     {
@@ -187,7 +187,7 @@ impl Pretty for address::StakeholderId {
     }
 }
 
-impl Pretty for genesis::BlockHeader {
+impl Pretty for boundary::BlockHeader {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
         where W: Write
     {
@@ -211,7 +211,7 @@ impl Pretty for normal::BlockHeader {
     }
 }
 
-impl Pretty for genesis::Consensus {
+impl Pretty for boundary::Consensus {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
         where W: Write
     {
