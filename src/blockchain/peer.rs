@@ -42,7 +42,7 @@ impl<'a> ConnectedPeer<'a> {
         // recover and print the TIP of the network
         let tip = self.query_tip();
 
-        // Start fetching at the current HEAD tag, or the genesis block if
+        // Start fetching at the current HEAD tag, or the boundary block if
         // it doesn't exist.
         let our_tip = self.load_local_tip();
 
@@ -101,7 +101,7 @@ impl<'a> ConnectedPeer<'a> {
         // epoch.
         let first_unstable_epoch = tip.date.get_epochid() -
             match tip.date {
-                BlockDate::Genesis(_) => 1,
+                BlockDate::Boundary(_) => 1,
                 BlockDate::Normal(d) =>
                     if d.slotid as usize <= peer.blockchain.config.epoch_stability_depth { 1 } else { 0 }
             };
@@ -114,7 +114,7 @@ impl<'a> ConnectedPeer<'a> {
         // If our tip is in an epoch that has become stable, we now need
         // to pack it. So read the previously fetched blocks in this epoch
         // and prepend them to the incoming blocks.
-        if best_tip.0.date.get_epochid() < first_unstable_epoch && (! best_tip.1) // the second item mark if the tip is genesis
+        if best_tip.0.date.get_epochid() < first_unstable_epoch && (! best_tip.1) // the second item mark if the tip is boundary
             && !internal::epoch_exists(&peer.blockchain.storage, best_tip.0.date.get_epochid())
         {
             let epoch_id = best_tip.0.date.get_epochid();
@@ -148,7 +148,7 @@ impl<'a> ConnectedPeer<'a> {
                 let hdr = block.get_header();
                 assert!(hdr.get_blockdate().get_epochid() == first_unstable_epoch);
                 cur_hash = hdr.get_previous_header();
-                if hdr.get_blockdate().is_genesis() { break }
+                if hdr.get_blockdate().is_boundary() { break }
             }
             internal::maybe_create_epoch(&peer.blockchain.storage, first_unstable_epoch - 1, &cur_hash);
         }
@@ -163,7 +163,7 @@ impl<'a> ConnectedPeer<'a> {
             pbr.set_message(&format!("downloading epoch {} -> ", date.get_epochid()));
 
             // Flush the previous epoch (if any).
-            if date.is_genesis() {
+            if date.is_boundary() {
                 let mut writer_state = None;
                 mem::swap(&mut writer_state, &mut cur_epoch_state);
                 if let Some((epoch_id, writer, epoch_time_start)) = writer_state {
@@ -183,8 +183,8 @@ impl<'a> ConnectedPeer<'a> {
                 storage::blob::write(&peer.blockchain.storage, &block_hash, block_raw.as_ref()).unwrap();
             } else {
 
-                // If this is the epoch genesis block, start writing a new epoch pack.
-                if date.is_genesis() {
+                // If this is the epoch boundary block, start writing a new epoch pack.
+                if date.is_boundary() {
                     cur_epoch_state = Some((
                         date.get_epochid(),
                         storage::pack::packwriter_init(&peer.blockchain.storage.config).unwrap(),
@@ -280,25 +280,25 @@ impl<'a> Peer<'a> {
         )
     }
 
-    /// get the remote local tip. the bool is to note if the tip is the same as genesis
+    /// get the remote local tip. the bool is to note if the tip is the same as boundary
     pub fn load_local_tip(&self) -> (BlockRef, bool) {
-        let genesis_ref = (BlockRef {
+        let boundary_ref = (BlockRef {
             hash: self.blockchain.config.genesis.clone(),
             parent: self.blockchain.config.genesis_prev.clone(),
-            date: BlockDate::Genesis(self.blockchain.config.epoch_start)
+            date: BlockDate::Boundary(self.blockchain.config.epoch_start)
         }, true);
         let our_tip = match self.blockchain.storage.get_block_from_tag(&self.tag) {
-            Err(storage::Error::NoSuchTag) => genesis_ref,
+            Err(storage::Error::NoSuchTag) => boundary_ref,
             Err(err) => panic!(err),
             Ok(block) => {
                 let header = block.get_header();
                 let hash = header.compute_hash();
-                let is_genesis = hash == genesis_ref.0.hash;
+                let is_boundary = hash == boundary_ref.0.hash;
                 (BlockRef {
                     hash: hash,
                     parent: header.get_previous_header(),
                     date: header.get_blockdate()
-                }, is_genesis)
+                }, is_boundary)
             }
         };
         our_tip
@@ -359,7 +359,7 @@ mod internal {
             assert!(hdr.get_blockdate().get_epochid() == epoch_id);
             blocks.push((storage::types::header_to_blockhash(&cur_hash), block_raw));
             cur_hash = hdr.get_previous_header();
-            if hdr.get_blockdate().is_genesis() { break }
+            if hdr.get_blockdate().is_boundary() { break }
         }
 
         while let Some((hash, block_raw)) = blocks.pop() {

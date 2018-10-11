@@ -27,7 +27,7 @@ impl StatePtr {
         if let Some(ref date) = self.latest_addr {
             date.clone()
         } else {
-            BlockDate::Genesis(0)
+            BlockDate::Boundary(0)
         }
     }
 }

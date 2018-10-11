@@ -1,6 +1,6 @@
 use cardano::wallet::{bip44};
 use std::collections::BTreeMap;
-use cardano::{address::ExtendedAddr, hdwallet::XPrv};
+use cardano::{address::{ExtendedAddr, Addr}, hdwallet::XPrv};
 
 use super::{AddressLookup, Address};
 use super::super::{utxo::{UTxO}};
@@ -21,7 +21,7 @@ pub struct SequentialBip44Lookup {
     // all the known expected addresses, that includes
     // all different accounts, and also the next not yet live
     // account's addresses
-    expected: BTreeMap<ExtendedAddr, bip44::Addressing>,
+    expected: BTreeMap<Addr, bip44::Addressing>,
 
     // accounts threshold index for internal and external addresses
     accounts: Vec<[bip44::Index;2]>,
@@ -60,7 +60,7 @@ impl SequentialBip44Lookup {
         while r < max {
             let addressing = bip44::Addressing { account: *account, change: change, index: r };
             let addr = self.get_address(&addressing);
-            self.expected.insert(addr, addressing);
+            self.expected.insert(addr.into(), addressing);
             r = r.incr(1)?;
         }
         Ok(())
@@ -106,7 +106,7 @@ impl AddressLookup for SequentialBip44Lookup {
     type Error = bip44::bip44::Error;
 
     fn lookup(&mut self, utxo: UTxO<ExtendedAddr>) -> Result<Option<UTxO<Address>>> {
-        let addressing = self.expected.get(&utxo.credited_address).cloned();
+        let addressing = self.expected.get(&utxo.credited_address.to_address()).cloned();
         if let Some(addressing) = addressing {
             self.threshold_generate(addressing)?;
 

@@ -27,7 +27,7 @@ pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
 
     let from_ptr = state.ptr().clone();
     let from = from_ptr.latest_known_hash;
-    let from_date = from_ptr.latest_addr.unwrap_or(BlockDate::Genesis(0));
+    let from_date = from_ptr.latest_addr.unwrap_or(BlockDate::Boundary(0));
     let num_blocks = blockchain_tip.date - from_date;
 
     term.info(&format!("syncing wallet from {} to {}\n", from_date, blockchain_tip.date)).unwrap();

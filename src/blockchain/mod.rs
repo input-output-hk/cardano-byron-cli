@@ -148,7 +148,7 @@ impl Blockchain {
         let genesis_ref = (BlockRef {
             hash: self.config.genesis.clone(),
             parent: self.config.genesis_prev.clone(),
-            date: block::BlockDate::Genesis(self.config.epoch_start)
+            date: block::BlockDate::Boundary(self.config.epoch_start)
         }, true);
         match self.storage.get_block_from_tag(LOCAL_BLOCKCHAIN_TIP_TAG) {
             Err(storage::Error::NoSuchTag) => genesis_ref,
