@@ -378,7 +378,7 @@ mod internal {
 
         // TODO: should test that epoch <epoch_id - 1> exists.
 
-        storage::epoch::epoch_create(&storage.config, &packhash, epoch_id);
+        storage::epoch::epoch_create(&storage, &packhash, epoch_id, None);
 
         info!( "=> pack {} written for epoch {} in {}"
              , hex::encode(&packhash[..])

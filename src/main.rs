@@ -876,6 +876,21 @@ fn transaction_argument_output_match<'a>(matches: &ArgMatches<'a>) -> Option<(ca
 
     Some((address, coin))
 }
+fn transaction_argument_selection_algorithm_match<'a>(matches: &ArgMatches<'a>) -> ::cardano::wallet::scheme::SelectionPolicy
+{
+    use cardano::wallet::scheme::SelectionPolicy;
+    if matches.is_present("SELECT_HEAD_FIRST") {
+        SelectionPolicy::FirstMatchFirst
+    } else if matches.is_present("SELECT_LARGEST_FIRST") {
+        SelectionPolicy::LargestFirst
+    } else if matches.is_present("SELECT_BLACKJACK") {
+        let value = value_t!(matches, "SELECT_BLACKJACK", u32).unwrap_or_else(|e| e.exit());
+        SelectionPolicy::Blackjack(value.into())
+    } else {
+        SelectionPolicy::LargestFirst
+    }
+}
+
 
 fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     match matches.subcommand() {
@@ -947,8 +962,9 @@ fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: 
         ("input-select", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             let wallets = values_t!(matches, "WALLET_NAME", wallet::WalletName).unwrap_or_else(|e| e.exit());
+            let selection_algorithm = transaction_argument_selection_algorithm_match(&matches);
 
-            transaction::commands::input_select(&mut term, root_dir, id, wallets)
+            transaction::commands::input_select(&mut term, root_dir, id, wallets, selection_algorithm)
                 .unwrap_or_else(|e| term.fail_with(e));
         }
         ("rm-output", Some(matches)) => {
@@ -1034,6 +1050,21 @@ fn transaction_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .about("Select input automatically using a wallet (or a set of wallets), and a input selection algorithm")
             .arg(transaction_argument_name_definition())
             .arg(Arg::with_name("WALLET_NAME").required(true).multiple(true).help("wallet name to use for the selection"))
+            .arg(Arg::with_name("SELECT_LARGEST_FIRST")
+                .long("--select-largest-first")
+                .group("SELECTION_ALGORITHM")
+                .required(false)
+                .help("Order the input by size, take the largest ones first to build this transaction")
+            )
+            .arg(Arg::with_name("SELECT_BLACKJACK")
+                .long("--select-exact-inputs")
+                .alias("blackjack")
+                .group("SELECTION_ALGORITHM")
+                .required(false)
+                .takes_value(true)
+                .value_name("MAX_EXTRA_FEES")
+                .help("select the exact necessary amount to perform the transaction. The optional parameter takes the accepted loss (in Lovelace, 1µ Ada).")
+            )
         )
         .subcommand(SubCommand::with_name(TransactionCmd::AddChange.as_string())
             .about("Add a change address to a transaction")
@@ -1094,6 +1125,9 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("hash", Some(_)) => {
             debug::hash();
         },
+        ("decode-utxos", Some(_)) => {
+            debug::decode_utxos();
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1124,5 +1158,8 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("hash")
             .about("compute the Blake2b256 hash of the data on stdin.")
+        )
+        .subcommand(SubCommand::with_name("decode-utxos")
+            .about("decode and dump a UTXO delta file")
         )
 }

@@ -279,6 +279,13 @@ cardano-cli transation input-select ${STAGING_ID} ${WALLET_ALIAS1} ${WALLET_ALIA
 
 This algorithm will select all the needed inputs from the given wallet(s).
 
+There are 2 supported algorithms at the moment:
+
+* `--select-largest-first` this algorithm will take the large inputs first. It is the default
+  algorithm because it is the most likely to succeed to find enough inputs to make a transactions.
+* `--select-exact-inputs=MAX_EXTRA_FEES` this one tries to select only the required inputs accepting
+  to lose up to the given `MAX_EXTRA_FEES`.
+
 ### Finalizing the transation
 
 Finalizing the transaction does one useful action: it rebalance the outputs
@@ -777,7 +784,18 @@ Select input automatically using a wallet (or a set of wallets), and a input sel
 
 USAGE:
 
-    cardano-cli transaction input-select <TRANSACTION_ID> <WALLET_NAME>...
+    cardano-cli transaction input-select [FLAGS] [OPTIONS] <TRANSACTION_ID> <WALLET_NAME>...
+
+FLAGS:
+
+        --quiet                   run the command quietly, do not print anything to the command line output
+        --select-largest-first    Order the input by size, take the largest ones first to build this transaction
+
+OPTIONS:
+
+        --select-exact-inputs <MAX_EXTRA_FEES>
+            select the exact necessary amount to perform the transaction. The optional parameter takes the accepted loss
+            (in Lovelace, 1µ Ada).
 
 ARGS:
 

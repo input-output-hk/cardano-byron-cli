@@ -3,7 +3,14 @@ use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
 use super::super::blockchain::{Blockchain, BlockchainName};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
-use cardano::{self, tx::{self, Tx, TxId, TxoPointer, TxInWitness}, coin::{self, Coin, sum_coins}, address::{ExtendedAddr}, fee::{LinearFee, FeeAlgorithm}};
+use cardano::{
+    self,
+    tx::{self, Tx, TxId, TxoPointer, TxInWitness},
+    coin::{self, Coin, sum_coins},
+    address::{ExtendedAddr},
+    fee::{LinearFee, FeeAlgorithm},
+    wallet::scheme::{SelectionPolicy},
+};
 use storage_units;
 
 #[derive(Debug)]
@@ -502,13 +509,14 @@ pub fn input_select( term: &mut Term
                    , root_dir: PathBuf
                    , id_str: &str
                    , wallets: Vec<WalletName>
+                   , selection_type: SelectionPolicy
                    )
     -> Result<(), Error>
 {
-    use ::cardano::{fee::{self}, input_selection::{SelectionAlgorithm, SelectionPolicy}, txutils};
+    use ::cardano::{fee::{self}, input_selection::{InputSelectionAlgorithm}, txutils};
+    use ::cardano::input_selection::{Blackjack, LargestFirst, HeadFirst};
 
     let alg = fee::LinearFee::default();
-    let selection_policy = SelectionPolicy::default();
 
     let mut staging = load_staging(root_dir.clone(), id_str)?;
 
@@ -524,14 +532,20 @@ pub fn input_select( term: &mut Term
     }).collect::<Vec<_>>();
     let inputs = list_input_inputs(term, root_dir.clone(), wallets);
 
-    let (_, selected_inputs, change) = alg.compute(
-        selection_policy,
-        inputs.iter(),
-        outputs.iter(),
-        &output_policy
-    ).map_err(Error::CannotInputSelectSelectionFailed)?;
+    let selection_result = match selection_type {
+        SelectionPolicy::Blackjack(threshold) => {
+            Blackjack::new(threshold, inputs).compute(&alg, outputs, &output_policy)
+        },
+        SelectionPolicy::LargestFirst => {
+            LargestFirst::from(inputs).compute(&alg, outputs, &output_policy)
+        },
+        SelectionPolicy::FirstMatchFirst => {
+            HeadFirst::from(inputs).compute(&alg, outputs, &output_policy)
+        }
+    };
+    let selection_result = selection_result.map_err(Error::CannotInputSelectSelectionFailed)?;
 
-    for input in selected_inputs {
+    for input in selection_result.selected_inputs {
         staging.add_input(core::Input {
             transaction_id: input.ptr.id,
             index_in_transaction: input.ptr.index,

@@ -6,8 +6,8 @@ use cardano_storage as storage;
 
 use utils::{term::{Term, style::Style}, time};
 
-use super::parse_genesis_data;
-use super::genesis_data;
+use exe_common::parse_genesis_data;
+use exe_common::genesis_data;
 use super::{peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{self, block::{RawBlock, HeaderHash}};
 

@@ -6,6 +6,7 @@ use cbor_event;
 #[derive(Debug)]
 pub enum Error {
     IoError(io::Error),
+    StorageError(cardano_storage::Error),
 
     NewCannotInitializeBlockchainDirectory(cardano_storage::Error),
 
@@ -32,12 +33,17 @@ impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self { Error::IoError(e) }
 }
 
+impl From<cardano_storage::Error> for Error {
+    fn from(e: cardano_storage::Error) -> Self { Error::StorageError(e) }
+}
+
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::IoError(_) => write!(f, "I/O Error"),
+            Error::StorageError(_) => write!(f, "Storage Error"),
 
             Error::NewCannotInitializeBlockchainDirectory(_) => write!(f, "Cannot Initialise the blockchain directory"),
             Error::ListNoBlockchains                         => write!(f, "No local blockchains yet"),
@@ -59,6 +65,7 @@ impl error::Error for Error {
     fn cause(&self) -> Option<& error::Error> {
         match self {
             Error::IoError(ref err) => Some(err),
+            Error::StorageError(ref err) => Some(err),
             Error::NewCannotInitializeBlockchainDirectory(ref err) => Some(err),
             Error::ListBlockchainInvalidName(ref err) => Some(err),
             Error::CatMalformedBlock(ref err) => Some(err),
