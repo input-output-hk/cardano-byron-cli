@@ -8,7 +8,7 @@ use cardano_storage::{self as storage, Storage};
 
 enum IteratorType<'a> {
     Epoch(epoch::Epochs<'a>, Option<epoch::Iter>),
-    Loose(&'a Storage, storage::block::Range)
+    Loose(&'a Storage, storage::iter::Range)
 }
 impl<'a> IteratorType<'a> {
     fn is_loose(&self) -> bool {
@@ -83,7 +83,7 @@ impl<'a> Iter<'a> {
         let iterator = match storage::block_location(&storage, &from) {
             None => panic!(),
             Some(storage::BlockLocation::Loose) => {
-                let mut range = storage::block::Range::new(
+                let mut range = storage::iter::Range::new(
                     storage,
                     *from.clone(),
                     *to.clone()
@@ -144,7 +144,7 @@ impl<'a> Iterator for Iter<'a> {
             match self.iterator.next() {
                 None => {
                     if ! self.iterator.is_loose() {
-                        let mut range = storage::block::Range::new(
+                        let mut range = storage::iter::Range::new(
                             &self.storage,
                             *self.last_known_block_hash.clone().unwrap(),
                             *self.ending_at.clone()

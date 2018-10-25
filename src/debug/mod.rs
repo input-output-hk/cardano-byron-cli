@@ -45,7 +45,7 @@ pub fn canonicalize_json()
 {
     let mut json = String::new();
     io::stdin().read_to_string(&mut json).expect("Cannot read stdin.");
-    print!("{}", parse_genesis_data::canonicalize_json(&json));
+    print!("{}", parse_genesis_data::canonicalize_json(json.as_bytes()));
 }
 
 /// Compute the Blake2b256 hash of the data on stdin.
