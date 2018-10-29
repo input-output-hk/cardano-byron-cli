@@ -1,14 +1,38 @@
 use std::path::PathBuf;
 
 extern crate dirs;
-extern crate cardano_cli;
-extern crate cardano;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
-use self::cardano_cli::utils::term;
-use self::cardano_cli::{blockchain, wallet, transaction, debug};
+extern crate cryptoxide;
+extern crate cbor_event;
+extern crate cardano;
+extern crate exe_common;
+extern crate cardano_storage;
+extern crate storage_units;
+
+extern crate console;
+extern crate dialoguer;
+extern crate indicatif;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_yaml;
+extern crate serde_json;
+extern crate rand;
+extern crate humantime;
+extern crate base64;
+
+#[macro_use]
+mod utils;
+mod blockchain;
+mod wallet;
+mod transaction;
+mod debug;
+
+use utils::term;
 
 #[macro_use]
 extern crate clap;
