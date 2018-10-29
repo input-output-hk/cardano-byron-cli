@@ -1,6 +1,6 @@
 [package]
 name = "cardano-cli"
-version = "1.0.0-alpha1"
+version = "1.0.0-alpha2"
 authors = [ "Nicolas Di Prima <nicolas.diprima@iohk.io>"
           , "Vincent Hanquez <vincent.hanquez@iohk.io>"
           ]
