@@ -1,14 +1,38 @@
 use std::path::PathBuf;
 
 extern crate dirs;
-extern crate cardano_cli;
-extern crate cardano;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
-use self::cardano_cli::utils::term;
-use self::cardano_cli::{blockchain, wallet, transaction, debug};
+extern crate cryptoxide;
+extern crate cbor_event;
+extern crate cardano;
+extern crate exe_common;
+extern crate cardano_storage;
+extern crate storage_units;
+
+extern crate console;
+extern crate dialoguer;
+extern crate indicatif;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_yaml;
+extern crate serde_json;
+extern crate rand;
+extern crate humantime;
+extern crate base64;
+
+#[macro_use]
+mod utils;
+mod blockchain;
+mod wallet;
+mod transaction;
+mod debug;
+
+use utils::term;
 
 #[macro_use]
 extern crate clap;
@@ -1128,6 +1152,9 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("decode-utxos", Some(_)) => {
             debug::decode_utxos();
         },
+        ("decode-signed-tx", Some(_)) => {
+            debug::decode_signed_tx();
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1161,5 +1188,8 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("decode-utxos")
             .about("decode and dump a UTXO delta file")
+        )
+        .subcommand(SubCommand::with_name("decode-signed-tx")
+            .about("decode a signed transaction (TxAux)")
         )
 }
