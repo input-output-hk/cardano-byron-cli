@@ -1,7 +1,7 @@
 use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
 use cardano_storage::utxo;
-use utils::term::Term;
-use std::io::{self, Read};
+use utils::term::{emoji, Term, style::Style};
+use std::{io::{self, Read}, str::FromStr};
 use exe_common::parse_genesis_data;
 
 pub fn command_address( mut term: Term
@@ -60,4 +60,28 @@ pub fn decode_utxos() {
     let mut data = vec![];
     io::stdin().read_to_end(&mut data).expect("Cannot read stdin.");
     println!("{:?}", utxo::decode_utxo_file(&mut &data[..]).unwrap());
+}
+
+pub fn decode_signed_tx() {
+    let mut data = String::new();
+    io::stdin().read_to_string(&mut data).expect("Cannot read stdin.");
+
+    let bytes = base64::decode(&data).unwrap();
+    let txaux : cardano::tx::TxAux = cbor_event::de::RawCbor::from(&bytes).deserialize_complete().unwrap();
+
+    println!("inputs({})", txaux.tx.inputs.len());
+    for ((i, input), witness) in txaux.tx.inputs.iter().enumerate().zip(txaux.witness.iter()) {
+        let signature_ok = witness.verify_tx(Default::default(), &txaux.tx);
+        let valid = if signature_ok {
+            emoji::CHECK_MARK
+        } else {
+            emoji::CHECK_MARK
+        };
+        println!(" - input ({}) {}.{} {}", i, style!(&input.id), style!(&input.index), valid);
+    }
+
+    println!("outputs({}):", txaux.tx.outputs.len());
+    for (i, output) in txaux.tx.outputs.iter().enumerate() {
+        println!(" - output ({}) {} {}", i, style!(&output.address), style!(&output.value));
+    }
 }

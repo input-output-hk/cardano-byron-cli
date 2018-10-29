@@ -1128,6 +1128,9 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("decode-utxos", Some(_)) => {
             debug::decode_utxos();
         },
+        ("decode-signed-tx", Some(_)) => {
+            debug::decode_signed_tx();
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1161,5 +1164,8 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("decode-utxos")
             .about("decode and dump a UTXO delta file")
+        )
+        .subcommand(SubCommand::with_name("decode-signed-tx")
+            .about("decode a signed transaction (TxAux)")
         )
 }
