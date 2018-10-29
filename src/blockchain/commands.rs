@@ -245,7 +245,7 @@ pub fn log( term: &mut Term
         blockchain.load_tip().0.hash
     };
 
-    for block in storage::block::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
+    for block in storage::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
         use utils::pretty::Pretty;
 
         block.pretty(term, 0)?;
@@ -450,7 +450,7 @@ pub fn verify_chain( term: &mut Term
         let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
             .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
-        parse_genesis_data::parse_genesis_data(genesis_data)
+        parse_genesis_data::parse_genesis_data(genesis_data.as_bytes())
     };
 
     if genesis_data.genesis_prev != blockchain.config.genesis_prev {
