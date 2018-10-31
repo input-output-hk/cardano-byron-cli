@@ -295,7 +295,10 @@ pub fn load_attached_blockchain(term: &mut Term, root_dir: PathBuf, name: Option
             ::std::process::exit(1);
         },
         Some(blockchain) => {
-            Blockchain::load(root_dir, blockchain)
+            // FIXME: should report errors nicely, see issue #39
+            Blockchain::load(root_dir, blockchain).unwrap_or_else(|e| {
+                panic!("cannot load blockchain: {}", e);
+            })
         }
     }
 }

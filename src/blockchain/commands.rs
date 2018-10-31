@@ -63,7 +63,7 @@ pub fn list( term: &mut Term
         let name = BlockchainName::from_os_str(entry.file_name())
             .map_err(Error::ListBlockchainInvalidName)?;
 
-        let blockchain = Blockchain::load(root_dir.clone(), name);
+        let blockchain = Blockchain::load(root_dir.clone(), name)?;
 
         term.info(&blockchain.name)?;
         if detailed {
@@ -90,7 +90,7 @@ pub fn destroy( term: &mut Term
               )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     writeln!(term, "You are about to destroy the local blockchain {}.
 This means that all the blocks downloaded will be deleted and that the attached
@@ -125,7 +125,7 @@ pub fn remote_add( term: &mut Term
                  )
     -> Result<()>
 {
-    let mut blockchain = Blockchain::load(root_dir, name);
+    let mut blockchain = Blockchain::load(root_dir, name)?;
     blockchain.add_peer(remote_alias.clone(), remote_endpoint);
     blockchain.save();
 
@@ -146,7 +146,7 @@ pub fn remote_rm( term: &mut Term
                 )
     -> Result<()>
 {
-    let mut blockchain = Blockchain::load(root_dir, name);
+    let mut blockchain = Blockchain::load(root_dir, name)?;
     blockchain.remove_peer(remote_alias.clone());
     blockchain.save();
 
@@ -162,7 +162,7 @@ pub fn remote_fetch( term: &mut Term
                    )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     for np in blockchain.peers() {
         if peers.is_empty() || peers.contains(&np.name().to_owned()) {
@@ -191,7 +191,7 @@ pub fn remote_ls( term: &mut Term
                 )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     for np in blockchain.peers() {
         let peer = peer::Peer::prepare(&blockchain, np.name().to_owned());
@@ -232,7 +232,7 @@ pub fn log( term: &mut Term
           )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     let from = if let Some(hash) = from {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
@@ -261,7 +261,7 @@ pub fn forward( term: &mut Term
               )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     let hash = if let Some(hash) = to {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
@@ -298,7 +298,7 @@ pub fn pull( term: &mut Term
            )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir.clone(), name.clone());
+    let blockchain = Blockchain::load(root_dir.clone(), name.clone())?;
 
     for np in blockchain.peers() {
         if ! np.is_native() { continue; }
@@ -342,7 +342,7 @@ pub fn cat( term: &mut Term
           )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir.clone(), name.clone());
+    let blockchain = Blockchain::load(root_dir.clone(), name.clone())?;
     let rblk = get_block(&blockchain, &hash)?;
 
     if no_parse {
@@ -368,7 +368,7 @@ pub fn status( term: &mut Term
              )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     writeln!(term, "{}", style!("Blockchain").cyan().bold())?;
     {
@@ -412,7 +412,7 @@ pub fn verify_block( term: &mut Term
                    )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
     let rblk = get_block(&blockchain, &hash)?;
     match rblk.decode() {
         Ok(blk) => {
@@ -438,7 +438,7 @@ pub fn verify_chain( term: &mut Term
                    )
     -> Result<()>
 {
-    let blockchain = Blockchain::load(root_dir, name);
+    let blockchain = Blockchain::load(root_dir, name)?;
 
     let tip = blockchain.load_tip().0;
     let num_blocks = tip.date.slot_number();

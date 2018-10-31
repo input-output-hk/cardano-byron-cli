@@ -88,7 +88,7 @@ impl Blockchain {
     }
 
     /// load the blockchain
-    pub fn load(root_dir: PathBuf, name: BlockchainName) -> Self {
+    pub fn load(root_dir: PathBuf, name: BlockchainName) -> Result<Self> {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
         let storage = Storage::init(&storage_config).unwrap();
@@ -96,13 +96,13 @@ impl Blockchain {
         let file = storage_config.get_config_file();
         let config = Config::from_file(file).unwrap();
 
-        Blockchain {
+        Ok(Blockchain {
             name,
             dir,
             storage_config,
             storage,
             config
-        }
+        })
     }
 
     /// save the blockchain settings
