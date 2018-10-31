@@ -104,10 +104,15 @@ impl Blockchain {
     fn load_internal(root_dir: &Path, name: BlockchainName) -> Result<Self> {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
-        let storage = Storage::init(&storage_config).unwrap();
+        let storage = Storage::init(&storage_config)?;
 
         let file = storage_config.get_config_file();
-        let config = Config::from_file(file).unwrap();
+        let config = match Config::from_file(&file) {
+            Some(config) => config,
+            None => {
+                return Err(Error::LoadConfigFileNotFound(file));
+            }
+        };
 
         Ok(Blockchain {
             name,

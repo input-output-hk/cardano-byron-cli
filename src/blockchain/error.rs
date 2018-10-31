@@ -1,4 +1,4 @@
-use std::{io, fmt, error};
+use std::{io, fmt, error, path::PathBuf};
 use cardano::block::{self, HeaderHash};
 use cardano_storage;
 use cbor_event;
@@ -9,6 +9,8 @@ pub enum Error {
     StorageError(cardano_storage::Error),
 
     NewCannotInitializeBlockchainDirectory(cardano_storage::Error),
+
+    LoadConfigFileNotFound(PathBuf),
 
     ListNoBlockchains,
     ListPermissionsDenied,
@@ -46,6 +48,7 @@ impl fmt::Display for Error {
             Error::StorageError(_) => write!(f, "Storage Error"),
 
             Error::NewCannotInitializeBlockchainDirectory(_) => write!(f, "Cannot Initialise the blockchain directory"),
+            Error::LoadConfigFileNotFound(p)                 => write!(f, "Cannot load blockchain configuration from `{}`; is the blockchain initialized?", p.to_string_lossy()),
             Error::ListNoBlockchains                         => write!(f, "No local blockchains yet"),
             Error::ListPermissionsDenied                     => write!(f, "No local blockchains (permission denied to the cardano-cli directory, check the `root-dir` option of the CLI)"),
             Error::ListBlockchainInvalidName(_)              => write!(f, "Blockchain with invalid name"),
