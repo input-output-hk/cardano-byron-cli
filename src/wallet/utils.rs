@@ -296,8 +296,11 @@ pub fn load_attached_blockchain(term: &mut Term, root_dir: PathBuf, name: Option
         },
         Some(blockchain) => {
             // FIXME: should report errors nicely, see issue #39
-            Blockchain::load(root_dir, blockchain).unwrap_or_else(|e| {
-                panic!("cannot load blockchain: {}", e);
+            Blockchain::load(&root_dir, blockchain).unwrap_or_else(|e| {
+                panic!(
+                    "cannot load blockchain from directory `{}': {}",
+                    root_dir.to_string_lossy(), e
+                );
             })
         }
     }

@@ -6,7 +6,13 @@ pub mod error;
 
 pub use self::error::{Error, Result};
 
-use std::{path::PathBuf, ops::{Deref}, fmt, str::{FromStr}, ffi::OsString};
+use std::{
+    ffi::OsString,
+    fmt,
+    ops::Deref,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use exe_common::network::api::BlockRef;
 pub use exe_common::{config::net::{self, Config, Peer, Peers}, network};
@@ -88,7 +94,14 @@ impl Blockchain {
     }
 
     /// load the blockchain
-    pub fn load(root_dir: PathBuf, name: BlockchainName) -> Result<Self> {
+    pub fn load<P>(root_dir: P, name: BlockchainName) -> Result<Self>
+    where
+        P: AsRef<Path>,
+    {
+        Self::load_internal(root_dir.as_ref(), name)
+    }
+
+    fn load_internal(root_dir: &Path, name: BlockchainName) -> Result<Self> {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
         let storage = Storage::init(&storage_config).unwrap();
