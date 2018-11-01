@@ -1,5 +1,6 @@
 use super::config::{encrypt_primary_key, Config, HDWalletModel};
 use super::{WalletName, Wallet, Wallets};
+use super::error::{Error, Result};
 use super::state::{lookup};
 use super::utils::{*};
 
@@ -192,36 +193,30 @@ new transactions will be by recovering the wallet with the mnemonic words.",
     term.success("Wallet successfully destroyed.\n").unwrap()
 }
 
-
-pub fn attach( mut term: Term
-             , root_dir: PathBuf
-             , name: WalletName
-             , blockchain_name: BlockchainName
-             )
-{
+pub fn attach(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+    blockchain_name: BlockchainName
+) -> Result<()> {
     // load the wallet
-    let mut wallet = Wallet::load(root_dir.clone(), name);
+    let mut wallet = Wallet::load(&root_dir, name);
 
     // 1. is the wallet already attached
     if let Some(ref bn) = wallet.config.attached_blockchain {
-        term.error(&format!("Wallet already attached to blockchain `{}'\n", bn)).unwrap();
-        ::std::process::exit(1);
+        return Err(Error::AttachAlreadyAttached(bn.clone()));
     }
 
     // 2. check the blockchain exists
-    let blockchain_dir = blockchain::config::directory(root_dir.clone(), &blockchain_name);
-    if let Err(err) = ::std::fs::read_dir(blockchain_dir) {
-        term.error(&format!("Blockchain `{}' does not exists or you do not have user permissions\n", blockchain_name)).unwrap();
-        term.error(&format!("   |-> {}\n", err)).unwrap();
-        ::std::process::exit(2);
-    }
-    let _ = Blockchain::load(root_dir, blockchain_name.clone());
+    Blockchain::load(&root_dir, blockchain_name.clone())?;
 
     // 3. save the attached wallet
     wallet.config.attached_blockchain = Some(blockchain_name.as_ref().to_owned());
     wallet.save();
 
-    term.success("Wallet successfully attached to blockchain.\n").unwrap()
+    term.success("Wallet successfully attached to blockchain.\n").unwrap();
+
+    Ok(())
 }
 
 pub fn detach( mut term: Term

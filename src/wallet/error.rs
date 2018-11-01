@@ -1,3 +1,4 @@
+use blockchain::{self, BlockchainName};
 use cardano::hdwallet;
 use storage_units::utils::lock;
 use std::{error, fmt};
@@ -11,7 +12,12 @@ pub enum Error {
     CannotRetrievePrivateKey(hdwallet::Error),
     WalletLogAlreadyLocked(u32),
     WalletLogNotFound,
-    WalletLogError(log::Error)
+    WalletLogError(log::Error),
+    CannotLoadBlockchain(blockchain::Error),
+    AttachAlreadyAttached(String),
+}
+impl From<blockchain::Error> for Error {
+    fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
 }
 impl From<hdwallet::Error> for Error {
     fn from(e: hdwallet::Error) -> Self { Error::CannotRetrievePrivateKey(e) }
@@ -32,7 +38,9 @@ impl fmt::Display for Error {
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
             Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
-            Error::WalletLogError(_)                       => write!(f, "Error with the wallet log")
+            Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
+            Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
+            Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
         }
     }
 }
@@ -44,6 +52,10 @@ impl error::Error for Error {
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::WalletLogAlreadyLocked(_)               => None,
             Error::WalletLogNotFound                       => None,
+            Error::CannotLoadBlockchain(ref err)           => Some(err),
+            Error::AttachAlreadyAttached(_)                => None,
         }
     }
 }
+
+pub type Result<T> = std::result::Result<T, Error>;

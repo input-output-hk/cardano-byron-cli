@@ -681,7 +681,8 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let name = wallet_argument_name_match(&matches);
             let blockchain = blockchain_argument_name_match(&mut term, &matches);
 
-            wallet::commands::attach(term, root_dir, name, blockchain);
+            wallet::commands::attach(&mut term, root_dir, name, blockchain)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("detach", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
