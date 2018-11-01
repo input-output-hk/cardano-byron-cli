@@ -883,7 +883,7 @@ fn transaction_argument_txin_match<'a>(matches: &ArgMatches<'a>) -> Option<(card
 }
 fn transaction_argument_input_match<'a>(matches: &ArgMatches<'a>) -> Option<(cardano::tx::TxId, u32, Option<cardano::coin::Coin>)> {
     let (txid, index) = transaction_argument_txin_match(&matches)?;
-    let coin = value_t!(matches, "UTXO_AMOUNT", cardano::coin::Coin).ok();
+    let coin = value_t!(matches, "TRANSACTION_AMOUNT", cardano::coin::Coin).ok();
 
     Some((txid, index, coin))
 }
