@@ -1,7 +1,7 @@
 use std::{path::PathBuf, io::{self, Write}, iter, collections::BTreeMap, fmt, error};
 use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
-use super::super::blockchain::{Blockchain, BlockchainName};
+use super::super::blockchain::{self, Blockchain, BlockchainName};
 use super::super::wallet::{Wallets, Wallet, self, WalletName};
 use cardano::{
     self,
@@ -17,6 +17,7 @@ use storage_units;
 pub enum Error {
     IoError(::std::io::Error),
     InvalidStagingId(core::staging_id::ParseStagingIdError),
+    CannotLoadBlockchain(blockchain::Error),
     CannotLoadStagingTransaction(core::staging_transaction::StagingTransactionParseError),
 
     CannotCreateNewTransaction(storage_units::append::Error),
@@ -58,12 +59,16 @@ impl From<::std::io::Error> for Error {
 impl From<core::staging_id::ParseStagingIdError> for Error {
     fn from(e: core::staging_id::ParseStagingIdError) -> Self { Error::InvalidStagingId(e) }
 }
+impl From<blockchain::Error> for Error {
+    fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
+}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
         match self {
             IoError(_)                                 => write!(f, "I/O Error"),
             InvalidStagingId(_)                        => write!(f, "Invalid Staging ID"),
+            CannotLoadBlockchain(_)                    => write!(f, "Cannot load the blockchain"),
             CannotLoadStagingTransaction(_)            => write!(f, "Cannot load the staging transaction"),
             CannotCreateNewTransaction(_)              => write!(f, "Cannot create a new Staging Transaction"),
             CannotDestroyTransaction(_)                => write!(f, "Cannot destroy the Staging Transaction"),
@@ -106,6 +111,7 @@ impl error::Error for Error {
             IoError(ref err)                                 => Some(err),
             InvalidStagingId(ref err)                        => Some(err),
             CannotLoadStagingTransaction(ref err)            => Some(err),
+            CannotLoadBlockchain(ref err)                    => Some(err),
             CannotCreateNewTransaction(ref err)              => Some(err),
             CannotDestroyTransaction(ref err)                => Some(err),
             CannotSendTransactionNotFinalized(ref err)       => Some(err),
@@ -148,7 +154,7 @@ pub fn new( term: &mut Term
           )
     -> Result<(), Error>
 {
-    let blockchain = Blockchain::load(root_dir.clone(), blockchain);
+    let blockchain = Blockchain::load(root_dir.clone(), blockchain)?;
 
     let staging = StagingTransaction::new(root_dir, blockchain.config.protocol_magic)
         .map_err(Error::CannotCreateNewTransaction)?;
@@ -202,7 +208,7 @@ pub fn send( term: &mut Term
            )
     -> Result<(), Error>
 {
-    let blockchain = Blockchain::load(root_dir.clone(), blockchain);
+    let blockchain = Blockchain::load(root_dir.clone(), blockchain)?;
     let staging = load_staging(root_dir.clone(), id_str)?;
 
     let (finalized, changes) = staging.transaction().mk_finalized()
