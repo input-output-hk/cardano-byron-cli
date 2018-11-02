@@ -305,8 +305,20 @@ pub fn status(
     term.simply(" * balance ").unwrap();
     term.success(&format!(" {}", total)).unwrap();
     term.simply("\n").unwrap();
-    term.simply(" * synced to block ").unwrap();
-    term.warn(&format!(" {} ({})", state.ptr.latest_known_hash, state.ptr.latest_addr.unwrap())).unwrap();
+    match state.ptr.latest_addr {
+        Some(latest_addr) => {
+            term.simply(" * synced to block ").unwrap();
+            term.warn(&format!(
+                " {} ({})",
+                state.ptr.latest_known_hash,
+                latest_addr,
+            )).unwrap();
+        }
+        None => {
+            term.simply(" * ").unwrap();
+            term.warn("not synced yet").unwrap();
+        }
+    }
     term.simply("\n").unwrap();
 
     Ok(())
