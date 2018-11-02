@@ -111,7 +111,7 @@ impl Wallet {
         }
     }
 
-    pub unsafe fn destroy(self) -> ::std::io::Result<()> {
+    pub fn destroy(self) -> ::std::io::Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.0);
         ::std::fs::remove_dir_all(dir)
     }
