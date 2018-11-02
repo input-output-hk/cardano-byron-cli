@@ -1,7 +1,7 @@
 use blockchain::{self, BlockchainName};
 use cardano::{hdwallet, wallet::rindex};
 use storage_units::utils::lock;
-use std::{error, fmt};
+use std::{error, fmt, io};
 
 use super::state::log;
 
@@ -11,6 +11,7 @@ pub enum Error {
     CannotRetrievePrivateKeyInvalidPassword,
     CannotRetrievePrivateKey(hdwallet::Error),
     CannotRecoverFromDaedalusMnemonics(rindex::Error),
+    WalletDestroyFailed(io::Error),
     WalletLogAlreadyLocked(u32),
     WalletLogNotFound,
     WalletLogError(log::Error),
@@ -38,6 +39,7 @@ impl fmt::Display for Error {
             Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
             Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
+            Error::WalletDestroyFailed(_)                  => write!(f, "Cannot destroy the wallet"),
             Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
@@ -52,6 +54,7 @@ impl error::Error for Error {
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::CannotRetrievePrivateKey(ref err)       => Some(err),
             Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),
+            Error::WalletDestroyFailed(ref err)            => Some(err),
             Error::WalletLogAlreadyLocked(_)               => None,
             Error::WalletLogNotFound                       => None,
             Error::WalletLogError(ref err)                 => Some(err),

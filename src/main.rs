@@ -735,8 +735,9 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         ("destroy", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::destroy(term, root_dir, name);
-        },
+            wallet::commands::destroy(&mut term, root_dir, name)
+                .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("list", Some(matches)) => {
             let detailed = matches.is_present("WALLET_LIST_DETAILED");
 

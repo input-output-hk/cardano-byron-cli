@@ -178,13 +178,13 @@ where
     Ok(())
 }
 
-pub fn destroy( mut term: Term
-              , root_dir: PathBuf
-              , name: WalletName
-              )
-{
+pub fn destroy(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(&root_dir, name);
 
     writeln!(term, "You are about to destroy your wallet {}.
 This means that all the data associated to this wallet will be deleted on this device.
@@ -193,6 +193,10 @@ new transactions will be by recovering the wallet with the mnemonic words.",
         ::console::style(&wallet.name).bold().red(),
     ).unwrap();
 
+    // FIXME: create a confirmation API that is exposed on the command
+    // methods that need to put the user through a confirmation dialog.
+    // See issue #45
+
     let confirmation = ::dialoguer::Confirmation::new("Are you sure?")
         .use_line_input(true)
         .clear(false)
@@ -200,9 +204,11 @@ new transactions will be by recovering the wallet with the mnemonic words.",
         .interact().unwrap();
     if ! confirmation { ::std::process::exit(0); }
 
-    unsafe { wallet.destroy() }.unwrap_or_else(|e| term.fail_with(e));
+    wallet.destroy().map_err(|e| Error::WalletDestroyFailed(e))?;
 
-    term.success("Wallet successfully destroyed.\n").unwrap()
+    term.success("Wallet successfully destroyed.\n").unwrap();
+
+    Ok(())
 }
 
 pub fn attach(
