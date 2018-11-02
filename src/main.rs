@@ -675,8 +675,18 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
                 }
             }
 
-            wallet::commands::recover(term, root_dir, name, wallet_scheme, derivation_scheme, mnemonic_length, interactive, daedalus_seed, mnemonic_lang);
-        },
+            wallet::commands::recover(
+                &mut term,
+                root_dir,
+                name,
+                wallet_scheme,
+                derivation_scheme,
+                mnemonic_length,
+                interactive,
+                daedalus_seed,
+                mnemonic_lang
+            ).unwrap_or_else(|e| term.fail_with(e));
+        }
         ("address", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
             let account = value_t!(matches, "ACCOUNT_INDEX", u32).unwrap_or_else(|e| e.exit());

@@ -1,5 +1,5 @@
 use blockchain::{self, BlockchainName};
-use cardano::hdwallet;
+use cardano::{hdwallet, wallet::rindex};
 use storage_units::utils::lock;
 use std::{error, fmt};
 
@@ -10,6 +10,7 @@ use super::state::log;
 pub enum Error {
     CannotRetrievePrivateKeyInvalidPassword,
     CannotRetrievePrivateKey(hdwallet::Error),
+    CannotRecoverFromDaedalusMnemonics(rindex::Error),
     WalletLogAlreadyLocked(u32),
     WalletLogNotFound,
     WalletLogError(log::Error),
@@ -36,6 +37,7 @@ impl fmt::Display for Error {
         match self {
             Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
+            Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
             Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
@@ -47,11 +49,12 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn cause(&self) -> Option<& error::Error> {
         match self {
-            Error::CannotRetrievePrivateKey(ref err)       => Some(err),
-            Error::WalletLogError(ref err)                 => Some(err),
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
+            Error::CannotRetrievePrivateKey(ref err)       => Some(err),
+            Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),
             Error::WalletLogAlreadyLocked(_)               => None,
             Error::WalletLogNotFound                       => None,
+            Error::WalletLogError(ref err)                 => Some(err),
             Error::CannotLoadBlockchain(ref err)           => Some(err),
             Error::AttachAlreadyAttached(_)                => None,
         }

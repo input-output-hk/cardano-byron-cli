@@ -104,17 +104,19 @@ where
     Ok(())
 }
 
-pub fn recover<D>( mut term: Term
-                 , root_dir: PathBuf
-                 , name: WalletName
-                 , wallet_scheme: HDWalletModel
-                 , derivation_scheme: DerivationScheme
-                 , mnemonic_size: bip39::Type
-                 , interactive: bool
-                 , daedalus_seed: bool
-                 , language: D
-                 )
-    where D: bip39::dictionary::Language
+pub fn recover<D>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+    wallet_scheme: HDWalletModel,
+    derivation_scheme: DerivationScheme,
+    mnemonic_size: bip39::Type,
+    interactive: bool,
+    daedalus_seed: bool,
+    language: D,
+) -> Result<()>
+where
+    D: bip39::dictionary::Language,
 {
     let config = Config {
         attached_blockchain: None,
@@ -126,18 +128,22 @@ pub fn recover<D>( mut term: Term
     term.info("enter your mnemonics\n").unwrap();
 
     let (string, _, entropy) = if interactive {
-        prompt::mnemonics::interactive_input_words(&mut term, &language, mnemonic_size)
+        prompt::mnemonics::interactive_input_words(term, &language, mnemonic_size)
     } else {
-        prompt::mnemonics::input_mnemonic_phrase(&mut term, &language, mnemonic_size)
+        prompt::mnemonics::input_mnemonic_phrase(term, &language, mnemonic_size)
     };
 
     // 3. perform the seed generation from the entropy
     let xprv = if daedalus_seed {
-        match wallet::rindex::RootKey::from_daedalus_mnemonics(derivation_scheme, &language, string.to_string()) {
-            Err(err) => {
-                term.fail_with(err);
-            },
-            Ok(root_key) => { (*root_key).clone() }
+        match wallet::rindex::RootKey::from_daedalus_mnemonics(
+            derivation_scheme,
+            &language,
+            string.to_string(),
+        ) {
+            Ok(root_key) => (*root_key).clone(),
+            Err(e) => {
+                return Err(Error::CannotRecoverFromDaedalusMnemonics(e));
+            }
         }
     } else {
         term.info("Enter the wallet recovery password (if the password is wrong, you won't know).\n").unwrap();
@@ -168,6 +174,8 @@ pub fn recover<D>( mut term: Term
     wallet.save();
 
     term.success(&format!("wallet `{}' successfully recovered.\n", &wallet.name)).unwrap();
+
+    Ok(())
 }
 
 pub fn destroy( mut term: Term
