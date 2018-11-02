@@ -644,8 +644,16 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let mnemonic_length = wallet_argument_mnemonic_size_match(&matches);
             let mnemonic_langs  = wallet_argument_mnemonic_languages_match(&matches);
 
-            wallet::commands::new(term, root_dir, name, wallet_scheme, derivation_scheme, mnemonic_length, mnemonic_langs);
-        },
+            wallet::commands::new(
+                &mut term,
+                root_dir,
+                name,
+                wallet_scheme,
+                derivation_scheme,
+                mnemonic_length,
+                mnemonic_langs,
+            ).unwrap_or_else(|e| term.fail_with(e));
+        }
         ("recover", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
             let mut wallet_scheme = wallet_argument_wallet_scheme_match(&matches);

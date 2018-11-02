@@ -43,15 +43,17 @@ pub fn list( mut term: Term
 
 /// function to create a new wallet
 ///
-pub fn new<D>( mut term: Term
-             , root_dir: PathBuf
-             , name: WalletName
-             , wallet_scheme: HDWalletModel
-             , derivation_scheme: DerivationScheme
-             , mnemonic_size: bip39::Type
-             , languages: Vec<D>
-             )
-    where D: bip39::dictionary::Language
+pub fn new<D>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+    wallet_scheme: HDWalletModel,
+    derivation_scheme: DerivationScheme,
+    mnemonic_size: bip39::Type,
+    languages: Vec<D>,
+) -> Result<()>
+where
+    D: bip39::dictionary::Language,
 {
     let config = Config {
         attached_blockchain: None,
@@ -98,6 +100,8 @@ pub fn new<D>( mut term: Term
     wallet.save();
 
     term.success(&format!("wallet `{}' successfully created.\n", &wallet.name)).unwrap();
+
+    Ok(())
 }
 
 pub fn recover<D>( mut term: Term
