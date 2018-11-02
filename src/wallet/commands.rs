@@ -282,7 +282,7 @@ pub fn status( mut term: Term
         term.simply("\n").unwrap();
     } else {
         term.info(&format!("Wallet {} status\n", &wallet.name)).unwrap();
-        term.warn("wallet not attached to a blockchain").unwrap();
+        term.warn("wallet not attached to a blockchain\n").unwrap();
         return;
     }
 
