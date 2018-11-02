@@ -237,31 +237,33 @@ pub fn attach(
     Ok(())
 }
 
-pub fn detach( mut term: Term
-             , root_dir: PathBuf
-             , name: WalletName
-             )
-{
+pub fn detach(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+) -> Result<()> {
     // load the wallet
-    let mut wallet = Wallet::load(root_dir.clone(), name);
+    let mut wallet = Wallet::load(&root_dir, name);
 
     let blockchainname = wallet.config.attached_blockchain().unwrap();
 
     // 1. get the wallet's blockchain
     let _ = load_attached_blockchain(
-        &mut term,
+        term,
         root_dir,
         blockchainname
     );
 
     // 2. delete the wallet log
-    wallet.delete_log().unwrap_or_else(|e| term.fail_with(e));
+    wallet.delete_log().map_err(|e| Error::WalletDeleteLogFailed(e))?;
 
     wallet.config.attached_blockchain = None;
 
     wallet.save();
 
-    term.success("Wallet successfully attached to blockchain.\n").unwrap()
+    term.success("Wallet successfully attached to blockchain.\n").unwrap();
+
+    Ok(())
 }
 
 pub fn status( mut term: Term
