@@ -266,11 +266,11 @@ pub fn detach(
     Ok(())
 }
 
-pub fn status( mut term: Term
-             , root_dir: PathBuf
-             , name: WalletName
-             )
-{
+pub fn status(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
@@ -283,7 +283,7 @@ pub fn status( mut term: Term
     } else {
         term.info(&format!("Wallet {} status\n", &wallet.name)).unwrap();
         term.warn("wallet not attached to a blockchain\n").unwrap();
-        return;
+        return Ok(());
     }
 
     term.simply(" * wallet model ").unwrap();
@@ -293,9 +293,14 @@ pub fn status( mut term: Term
     term.warn(&format!("{:?}", &wallet.config.derivation_scheme)).unwrap();
     term.simply("\n").unwrap();
 
-    let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir, lookup::accum::Accum::default());
+    let state = create_wallet_state_from_logs(
+        term,
+        &wallet,
+        root_dir,
+        lookup::accum::Accum::default()
+    );
 
-    let total = state.total().unwrap_or_else(|e| term.fail_with(e));
+    let total = state.total()?;
 
     term.simply(" * balance ").unwrap();
     term.success(&format!(" {}", total)).unwrap();
@@ -303,6 +308,8 @@ pub fn status( mut term: Term
     term.simply(" * synced to block ").unwrap();
     term.warn(&format!(" {} ({})", state.ptr.latest_known_hash, state.ptr.latest_addr.unwrap())).unwrap();
     term.simply("\n").unwrap();
+
+    Ok(())
 }
 
 pub fn log( mut term: Term

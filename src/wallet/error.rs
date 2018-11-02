@@ -1,5 +1,5 @@
-use blockchain::{self, BlockchainName};
-use cardano::{hdwallet, wallet::rindex};
+use blockchain;
+use cardano::{coin, hdwallet, wallet::rindex};
 use storage_units::utils::lock;
 use std::{error, fmt, io};
 
@@ -18,9 +18,13 @@ pub enum Error {
     WalletLogError(log::Error),
     CannotLoadBlockchain(blockchain::Error),
     AttachAlreadyAttached(String),
+    CoinError(coin::Error),
 }
 impl From<blockchain::Error> for Error {
     fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
+}
+impl From<coin::Error> for Error {
+    fn from(e: coin::Error) -> Self { Error::CoinError(e) }
 }
 impl From<hdwallet::Error> for Error {
     fn from(e: hdwallet::Error) -> Self { Error::CannotRetrievePrivateKey(e) }
@@ -47,6 +51,7 @@ impl fmt::Display for Error {
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
             Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
             Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
+            Error::CoinError(_)                            => write!(f, "Error with coin calculations"),
         }
     }
 }
@@ -63,6 +68,7 @@ impl error::Error for Error {
             Error::WalletLogError(ref err)                 => Some(err),
             Error::CannotLoadBlockchain(ref err)           => Some(err),
             Error::AttachAlreadyAttached(_)                => None,
+            Error::CoinError(ref err)                      => Some(err),
         }
     }
 }

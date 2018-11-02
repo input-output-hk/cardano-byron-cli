@@ -716,8 +716,9 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         ("status", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::status(term, root_dir, name);
-        },
+            wallet::commands::status(&mut term, root_dir, name)
+                .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("log", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
