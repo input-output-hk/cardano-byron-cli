@@ -1,5 +1,5 @@
 use blockchain;
-use cardano::{bip, coin, hdwallet, wallet::rindex};
+use cardano::{bip::bip44, coin, hdwallet, wallet::rindex};
 use storage_units::utils::lock;
 use std::{error, fmt, io};
 
@@ -10,6 +10,7 @@ use super::state::log;
 pub enum Error {
     CannotLoadBlockchain(blockchain::Error),
     CoinError(coin::Error),
+    Bip44AddressError(bip44::Error),
     CannotRetrievePrivateKey(hdwallet::Error),
     CannotRetrievePrivateKeyInvalidPassword,
     CannotRecoverFromDaedalusMnemonics(rindex::Error),
@@ -19,13 +20,15 @@ pub enum Error {
     WalletLogNotFound,
     WalletLogError(log::Error),
     AttachAlreadyAttached(String),
-    SyncBip44AccountError(bip::bip44::Error),
 }
 impl From<blockchain::Error> for Error {
     fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
 }
 impl From<coin::Error> for Error {
     fn from(e: coin::Error) -> Self { Error::CoinError(e) }
+}
+impl From<bip44::Error> for Error {
+    fn from(e: bip44::Error) -> Self { Error::Bip44AddressError(e) }
 }
 impl From<hdwallet::Error> for Error {
     fn from(e: hdwallet::Error) -> Self { Error::CannotRetrievePrivateKey(e) }
@@ -44,6 +47,7 @@ impl fmt::Display for Error {
         match self {
             Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
             Error::CoinError(_)                            => write!(f, "Error with coin calculations"),
+            Error::Bip44AddressError(_)                    => write!(f, "Error with BIP44 account addressing"),
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
             Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
             Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
@@ -53,7 +57,6 @@ impl fmt::Display for Error {
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
             Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
-            Error::SyncBip44AccountError(_)                => write!(f, "Cannot create BIP44 account"),
         }
     }
 }
@@ -62,6 +65,7 @@ impl error::Error for Error {
         match self {
             Error::CannotLoadBlockchain(ref err)           => Some(err),
             Error::CoinError(ref err)                      => Some(err),
+            Error::Bip44AddressError(ref err)              => Some(err),
             Error::CannotRetrievePrivateKey(ref err)       => Some(err),
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),
@@ -71,7 +75,6 @@ impl error::Error for Error {
             Error::WalletLogNotFound                       => None,
             Error::WalletLogError(ref err)                 => Some(err),
             Error::AttachAlreadyAttached(_)                => None,
-            Error::SyncBip44AccountError(ref err)          => Some(err),
         }
     }
 }

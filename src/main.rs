@@ -693,8 +693,15 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let index   = value_t!(matches, "ADDRESS_INDEX", u32).unwrap_or_else(|e| e.exit());
             let is_internal = matches.is_present("INTERNAL_ADDRESS");
 
-            wallet::commands::address(term, root_dir, name, account, is_internal, index);
-        },
+            wallet::commands::address(
+                &mut term,
+                root_dir,
+                name,
+                account,
+                is_internal,
+                index
+            ).unwrap_or_else(|e| term.fail_with(e));
+        }
         ("attach", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
             let blockchain = blockchain_argument_name_match(&mut term, &matches);

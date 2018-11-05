@@ -369,8 +369,7 @@ pub fn sync(term: &mut Term,
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
             let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
-            lookup_struct.prepare_next_account()
-                .map_err(|e| Error::SyncBip44AccountError(e))?;
+            lookup_struct.prepare_next_account()?;
 
             let mut state = create_wallet_state_from_logs(term, &wallet, root_dir.clone(), lookup_struct);
 
@@ -387,41 +386,37 @@ pub fn sync(term: &mut Term,
     Ok(())
 }
 
-pub fn address( mut term: Term
-              , root_dir: PathBuf
-              , name: WalletName
-              , account: u32
-              , is_internal: bool
-              , index: u32
-              )
-{
+pub fn address(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+    account: u32,
+    is_internal: bool,
+    index: u32,
+) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
     let addr = match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let mut lookup_struct = load_bip44_lookup_structure(&mut term, &wallet);
-            let account = match ::cardano::bip::bip44::Account::new(account) {
-                Err(err) => term.fail_with(err),
-                Ok(account) => account
-            };
+            let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
+            let account = ::cardano::bip::bip44::Account::new(account)?;
             let change = if is_internal {
-                account.internal().unwrap_or_else(|e| term.fail_with(e))
+                account.internal()?
             } else {
-                account.external().unwrap_or_else(|e| term.fail_with(e))
+                account.external()?
             };
-            let addressing = match change.index(index) {
-                Err(err) => term.fail_with(err),
-                Ok(addressing) => addressing
-            };
+            let addressing = change.index(index)?;
             lookup_struct.get_address(&addressing)
         },
         HDWalletModel::RandomIndex2Levels => {
-            let lookup_struct = load_randomindex_lookup_structure(&mut term, &wallet);
+            let lookup_struct = load_randomindex_lookup_structure(term, &wallet);
             let addressing = ::cardano::wallet::rindex::Addressing::new(account, index);
             lookup_struct.get_address(&addressing)
         }
     };
 
     writeln!(term, "{}", style!(addr));
+
+    Ok(())
 }
