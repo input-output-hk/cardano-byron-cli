@@ -743,7 +743,8 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         ("list", Some(matches)) => {
             let detailed = matches.is_present("WALLET_LIST_DETAILED");
 
-            wallet::commands::list(term, root_dir, detailed);
+            wallet::commands::list(&mut term, root_dir, detailed)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         _ => {
             term.error(matches.usage()).unwrap();

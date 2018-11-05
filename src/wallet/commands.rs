@@ -12,18 +12,18 @@ use utils::{term::{Term, style::{Style}}, prompt};
 
 use blockchain::{self, Blockchain, BlockchainName};
 
-pub fn list( mut term: Term
-           , root_dir: PathBuf
-           , detailed: bool
-           )
-{
-    let wallets = Wallets::load(root_dir.clone()).unwrap_or_else(|e| term.fail_with(e));
+pub fn list(
+    mut term: &mut Term,
+    root_dir: PathBuf,
+    detailed: bool,
+) -> Result<()> {
+    let wallets = Wallets::load(root_dir.clone())?;
     for (_, wallet) in wallets {
         let detail = if detailed {
             if let Some(blk_name) = &wallet.config.attached_blockchain {
                 let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup::accum::Accum::default());
 
-                let total = state.total().unwrap_or_else(|e| term.fail_with(e));
+                let total = state.total()?;
 
                 format!("\t{}\t{}@{}",
                     style!(total).green().bold(),
@@ -39,6 +39,7 @@ pub fn list( mut term: Term
 
         writeln!(term, "{}{}", style!(wallet.name).cyan().italic(), detail).unwrap();
     }
+    Ok(())
 }
 
 /// function to create a new wallet
