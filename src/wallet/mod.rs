@@ -19,7 +19,6 @@ use std::{
     io::{self, Read, Write},
     path::{Path, PathBuf},
 };
-use std::result::Result as StdResult;
 
 use cardano::{wallet, hdwallet::{XPub, XPUB_SIZE}};
 use storage_units::utils::{tmpfile::{TmpFile}};
@@ -117,49 +116,64 @@ impl Wallet {
         ::std::fs::remove_dir_all(dir)
     }
 
-    pub fn save(&self) {
+    pub fn save(&self) -> Result<()> {
+        self.save_internal().map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletSaveFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn save_internal(&self) -> Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.0);
-        fs::DirBuilder::new().recursive(true).create(dir.clone())
-            .unwrap();
+
+        fs::DirBuilder::new().recursive(true).create(dir.clone())?;
 
         // 1. save the configuration file
-        let mut tmpfile = TmpFile::create(dir.clone())
-            .unwrap();
+        let mut tmpfile = TmpFile::create(dir.clone())?;
         serde_yaml::to_writer(&mut tmpfile, &self.config)
-            .unwrap();
-        tmpfile.render_permanent(&dir.join(WALLET_CONFIG_FILE))
-            .unwrap();
+            .map_err(|e| Error::ConfigWriteFailed(dir.clone(), e))?;
+        tmpfile.render_permanent(&dir.join(WALLET_CONFIG_FILE))?;
 
         // 2. save the encrypted key
-        let mut tmpfile = TmpFile::create(dir.clone())
-            .unwrap();
-        tmpfile.write(&self.encrypted_key).unwrap();
-        tmpfile.render_permanent(&dir.join(WALLET_PRIMARY_KEY))
-            .unwrap();
+        let mut tmpfile = TmpFile::create(dir.clone())?;
+        tmpfile.write(&self.encrypted_key)?;
+        tmpfile.render_permanent(&dir.join(WALLET_PRIMARY_KEY))?;
 
         // 3. save the public key
         if let Some(ref xpub) = self.public_key {
-            let mut tmpfile = TmpFile::create(dir.clone())
-                .unwrap();
+            let mut tmpfile = TmpFile::create(dir.clone())?;
             tmpfile.write(xpub.as_ref()).unwrap();
-            tmpfile.render_permanent(&dir.join(WALLET_PUBLIC_KEY))
-                .unwrap();
+            tmpfile.render_permanent(&dir.join(WALLET_PUBLIC_KEY))?;
         };
+
+        Ok(())
     }
 
     pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Result<Self> {
-        let dir = config::directory(root_dir.as_ref(), &name.as_dirname());
-        let cfg = load_config(&dir)?;
-        Self::load_internal(root_dir.as_ref(), name, &dir, cfg)
-            .map_err(|e| Error::WalletLoadFailed(e))
+        Self::load_internal(root_dir.as_ref(), name)
+            .map_err(|e| {
+                if let Error::IoError(io_err) = e {
+                    Error::WalletLoadFailed(io_err)
+                } else {
+                    e
+                }
+            })
     }
 
     fn load_internal(
         root_dir: &Path,
         name: WalletName,
-        dir: &Path,
-        cfg: Config,
-    ) -> StdResult<Self, io::Error> {
+    ) -> Result<Self> {
+        let dir = config::directory(root_dir, &name.as_dirname());
+
+        let cfg_path = dir.join(WALLET_CONFIG_FILE);
+        let mut file = fs::File::open(&cfg_path)?;
+        let cfg = serde_yaml::from_reader(&mut file)
+            .map_err(|e| Error::ConfigReadFailed(cfg_path, e))?;
+
         let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))?;
         let mut key = Vec::with_capacity(150);
         file.read_to_end(&mut key)?;
@@ -181,10 +195,20 @@ impl Wallet {
         Ok(writer.release_lock())
     }
 
-    pub fn delete_log(&self) -> ::std::io::Result<()> {
+    pub fn delete_log(&self) -> Result<()> {
+        self.delete_log_internal().map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletDeleteLogFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn delete_log_internal(&self) -> Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.as_dirname());
-        let lock = LogLock::acquire_wallet_log_lock(dir.clone()).unwrap();
-        lock.delete_wallet_log_lock(dir)
+        let lock = LogLock::acquire_wallet_log_lock(dir.clone())?;
+        Ok(lock.delete_wallet_log_lock(dir)?)
     }
 
     /// convenient function to reconstruct a BIP44 wallet from the encrypted key and password
@@ -221,16 +245,6 @@ impl Wallet {
             root_key
         ))
     }
-}
-
-fn load_config(
-    dir: &Path,
-) -> Result<Config> {
-    let file_path = dir.join(WALLET_CONFIG_FILE);
-    let mut file = fs::File::open(&file_path)
-        .map_err(|e| Error::WalletLoadFailed(e))?;
-    serde_yaml::from_reader(&mut file)
-        .map_err(|e| Error::BadWalletConfig(file_path, e))
 }
 
 pub struct Wallets(BTreeMap<WalletName, Wallet>);

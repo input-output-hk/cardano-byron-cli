@@ -98,7 +98,7 @@ where
     let wallet = Wallet::new(root_dir, name, config, encrypted_xprv, public_key);
 
     // 6. save the wallet
-    wallet.save();
+    wallet.save()?;
 
     term.success(&format!("wallet `{}' successfully created.\n", &wallet.name)).unwrap();
 
@@ -172,7 +172,7 @@ where
     let wallet = Wallet::new(root_dir, name, config, encrypted_xprv, public_key);
 
     // 6. save the wallet
-    wallet.save();
+    wallet.save()?;
 
     term.success(&format!("wallet `{}' successfully recovered.\n", &wallet.name)).unwrap();
 
@@ -236,7 +236,7 @@ pub fn attach(
 
     // 3. save the attached wallet
     wallet.config.attached_blockchain = Some(blockchain_name.as_ref().to_owned());
-    wallet.save();
+    wallet.save()?;
 
     term.success("Wallet successfully attached to blockchain.\n").unwrap();
 
@@ -261,11 +261,11 @@ pub fn detach(
     );
 
     // 2. delete the wallet log
-    wallet.delete_log().map_err(|e| Error::WalletDeleteLogFailed(e))?;
+    wallet.delete_log()?;
 
     wallet.config.attached_blockchain = None;
 
-    wallet.save();
+    wallet.save()?;
 
     term.success("Wallet successfully attached to blockchain.\n").unwrap();
 
