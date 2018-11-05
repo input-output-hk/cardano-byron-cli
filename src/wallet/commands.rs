@@ -325,62 +325,66 @@ pub fn status(
     Ok(())
 }
 
-pub fn log( mut term: Term
-          , root_dir: PathBuf
-          , name: WalletName
-          , pretty: bool
-          )
-{
+pub fn log(term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+    pretty: bool,
+) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
-    let mut state = create_wallet_state_from_logs(&mut term, &wallet, root_dir, lookup::accum::Accum::default());
+    let mut state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
 
-    display_wallet_state_logs(&mut term, &wallet, &mut state, pretty);
+    display_wallet_state_logs(term, &wallet, &mut state, pretty);
+
+    Ok(())
 }
 
-pub fn utxos( mut term: Term
-            , root_dir: PathBuf
-            , name: WalletName
-            )
-{
+pub fn utxos(term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
-    let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir, lookup::accum::Accum::default());
+    let state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
 
-    display_wallet_state_utxos(&mut term, state);
+    display_wallet_state_utxos(term, state);
+
+    Ok(())
 }
 
-pub fn sync( mut term: Term
-           , root_dir: PathBuf
-           , name: WalletName
-           )
-
-{
+pub fn sync(term: &mut Term,
+    root_dir: PathBuf,
+    name: WalletName,
+) -> Result<()> {
     // 0. load the wallet
     let wallet = Wallet::load(root_dir.clone(), name);
 
     let blockchainname = wallet.config.attached_blockchain().unwrap();
 
     // 1. get the wallet's blockchain
-    let blockchain = load_attached_blockchain(&mut term, root_dir.clone(), blockchainname);
+    let blockchain = load_attached_blockchain(term, root_dir.clone(), blockchainname);
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let mut lookup_struct = load_bip44_lookup_structure(&mut term, &wallet);
-            lookup_struct.prepare_next_account().unwrap_or_else(|e| term.fail_with(e));
-            let mut state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup_struct);
+            let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
+            lookup_struct.prepare_next_account()
+                .map_err(|e| Error::SyncBip44AccountError(e))?;
 
-            update_wallet_state_with_utxos(&mut term, &wallet, &blockchain, &mut state);
+            let mut state = create_wallet_state_from_logs(term, &wallet, root_dir.clone(), lookup_struct);
+
+            update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
         },
         HDWalletModel::RandomIndex2Levels => {
-            let lookup_struct = load_randomindex_lookup_structure(&mut term, &wallet);
-            let mut state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup_struct);
+            let lookup_struct = load_randomindex_lookup_structure(term, &wallet);
+            let mut state = create_wallet_state_from_logs(term, &wallet, root_dir.clone(), lookup_struct);
 
-            update_wallet_state_with_utxos(&mut term, &wallet, &blockchain, &mut state);
+            update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
         },
     };
+
+    Ok(())
 }
 
 pub fn address( mut term: Term

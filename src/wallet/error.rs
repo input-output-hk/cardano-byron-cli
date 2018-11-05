@@ -1,5 +1,5 @@
 use blockchain;
-use cardano::{coin, hdwallet, wallet::rindex};
+use cardano::{bip, coin, hdwallet, wallet::rindex};
 use storage_units::utils::lock;
 use std::{error, fmt, io};
 
@@ -19,6 +19,7 @@ pub enum Error {
     WalletLogNotFound,
     WalletLogError(log::Error),
     AttachAlreadyAttached(String),
+    SyncBip44AccountError(bip::bip44::Error),
 }
 impl From<blockchain::Error> for Error {
     fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
@@ -52,6 +53,7 @@ impl fmt::Display for Error {
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
             Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
+            Error::SyncBip44AccountError(_)                => write!(f, "Cannot create BIP44 account"),
         }
     }
 }
@@ -69,6 +71,7 @@ impl error::Error for Error {
             Error::WalletLogNotFound                       => None,
             Error::WalletLogError(ref err)                 => Some(err),
             Error::AttachAlreadyAttached(_)                => None,
+            Error::SyncBip44AccountError(ref err)          => Some(err),
         }
     }
 }

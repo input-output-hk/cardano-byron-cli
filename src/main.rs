@@ -711,8 +711,9 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         ("sync", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::sync(term, root_dir, name);
-        },
+            wallet::commands::sync(&mut term, root_dir, name)
+                .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("status", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
@@ -722,18 +723,21 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         ("log", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::log(term, root_dir, name, false);
-        },
+            wallet::commands::log(&mut term, root_dir, name, false)
+                .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("utxos", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::utxos(term, root_dir, name);
+            wallet::commands::utxos(&mut term, root_dir, name)
+                .unwrap_or_else(|e| term.fail_with(e));
         },
         ("statement", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
-            wallet::commands::log(term, root_dir, name, true);
-        },
+            wallet::commands::log(&mut term, root_dir, name, true)
+                .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("destroy", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
 
