@@ -16,7 +16,7 @@ use self::state::log::{LogLock, LogWriter};
 use std::{
     collections::BTreeMap,
     fmt, fs,
-    io::{self, Read, Write},
+    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -251,19 +251,34 @@ pub struct Wallets(BTreeMap<WalletName, Wallet>);
 impl Wallets {
     pub fn new() -> Self { Wallets(BTreeMap::new())}
 
-    pub fn load(root_dir: PathBuf) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
+        Self::load_internal(root_dir.as_ref()).map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletsLoadFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn load_internal(root_dir: &Path) -> Result<Self> {
         let mut wallets = Wallets::new();
 
         let wallets_dir = config::wallet_directory(&root_dir);
-        for entry in ::std::fs::read_dir(wallets_dir).unwrap() {
-            let entry = entry.unwrap();
-            if ! entry.file_type().unwrap().is_dir() {
+        for entry in ::std::fs::read_dir(wallets_dir)? {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            if !file_type.is_dir() {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());
                 continue;
             }
-            let s = entry.file_name().into_string().unwrap_or_else(|err| {
-                panic!("invalid utf8... {:?}", err)
-            });
+            let s = match entry.file_name().into_string() {
+                Ok(s) => s,
+                Err(_) => {
+                    warn!("unexpected file in wallet directory: {:?}", entry.path());
+                    continue;
+                }
+            };
 
             if let Some(name) = WalletName::new(s) {
                 // load the wallet

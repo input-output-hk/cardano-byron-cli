@@ -27,6 +27,7 @@ pub enum Error {
     WalletLogNotFound,
     WalletLogError(log::Error),
     AttachAlreadyAttached(String),
+    WalletsLoadFailed(io::Error),
 }
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self { Error::IoError(e) }
@@ -72,6 +73,7 @@ impl fmt::Display for Error {
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
             Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
+            Error::WalletsLoadFailed(_)                    => write!(f, "Cannot load wallets"),
         }
     }
 }
@@ -95,6 +97,7 @@ impl error::Error for Error {
             Error::WalletLogNotFound                       => None,
             Error::WalletLogError(ref err)                 => Some(err),
             Error::AttachAlreadyAttached(_)                => None,
+            Error::WalletsLoadFailed(ref err)              => Some(err),
         }
     }
 }
