@@ -1,12 +1,15 @@
 use super::core;
-use super::super::blockchain;
+use super::super::{
+    blockchain,
+    wallet,
+};
 use cardano::{
     self,
     coin,
 };
 use storage_units;
 
-use std::{io::{self, Write}, fmt, error};
+use std::{fmt, io, error};
 
 #[derive(Debug)]
 pub enum Error {
@@ -14,6 +17,7 @@ pub enum Error {
     InvalidStagingId(core::staging_id::ParseStagingIdError),
     CannotLoadBlockchain(blockchain::Error),
     CannotLoadStagingTransaction(core::staging_transaction::StagingTransactionParseError),
+    CannotLoadWallet(wallet::Error),
 
     CannotCreateNewTransaction(storage_units::append::Error),
     CannotDestroyTransaction(storage_units::append::Error),
@@ -57,6 +61,9 @@ impl From<core::staging_id::ParseStagingIdError> for Error {
 impl From<blockchain::Error> for Error {
     fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
 }
+impl From<wallet::Error> for Error {
+    fn from(e: wallet::Error) -> Self { Error::CannotLoadWallet(e) }
+}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
@@ -65,6 +72,7 @@ impl fmt::Display for Error {
             InvalidStagingId(_)                        => write!(f, "Invalid Staging ID"),
             CannotLoadBlockchain(_)                    => write!(f, "Cannot load the blockchain"),
             CannotLoadStagingTransaction(_)            => write!(f, "Cannot load the staging transaction"),
+            CannotLoadWallet(_)                        => write!(f, "Cannot load wallet"),
             CannotCreateNewTransaction(_)              => write!(f, "Cannot create a new Staging Transaction"),
             CannotDestroyTransaction(_)                => write!(f, "Cannot destroy the Staging Transaction"),
             CannotSendTransactionNotFinalized(_)       => write!(f, "Cannot send transaction, finalize it first"),
@@ -107,6 +115,7 @@ impl error::Error for Error {
             InvalidStagingId(ref err)                        => Some(err),
             CannotLoadStagingTransaction(ref err)            => Some(err),
             CannotLoadBlockchain(ref err)                    => Some(err),
+            CannotLoadWallet(ref err)                        => Some(err),
             CannotCreateNewTransaction(ref err)              => Some(err),
             CannotDestroyTransaction(ref err)                => Some(err),
             CannotSendTransactionNotFinalized(ref err)       => Some(err),

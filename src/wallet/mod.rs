@@ -16,9 +16,10 @@ use self::state::log::{LogLock, LogWriter};
 use std::{
     collections::BTreeMap,
     fmt, fs,
-    io::{Read, Write},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
 };
+use std::result::Result as StdResult;
 
 use cardano::{wallet, hdwallet::{XPub, XPUB_SIZE}};
 use storage_units::utils::{tmpfile::{TmpFile}};
@@ -146,32 +147,29 @@ impl Wallet {
         };
     }
 
-    pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Self {
-        Self::load_internal(root_dir.as_ref(), name)
+    pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Result<Self> {
+        let dir = config::directory(root_dir.as_ref(), &name.as_dirname());
+        let cfg = load_config(&dir)?;
+        Self::load_internal(root_dir.as_ref(), name, &dir, cfg)
+            .map_err(|e| Error::WalletLoadFailed(e))
     }
 
-    fn load_internal(root_dir: &Path, name: WalletName) -> Self {
-        let dir = config::directory(root_dir, &name.as_dirname());
-
-        let mut file = fs::File::open(&dir.join(WALLET_CONFIG_FILE))
-            .unwrap();
-        let cfg = serde_yaml::from_reader(&mut file).unwrap();
-
-        let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))
-            .unwrap();
+    fn load_internal(
+        root_dir: &Path,
+        name: WalletName,
+        dir: &Path,
+        cfg: Config,
+    ) -> StdResult<Self, io::Error> {
+        let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))?;
         let mut key = Vec::with_capacity(150);
-        file.read_to_end(&mut key).unwrap();
+        file.read_to_end(&mut key)?;
 
-        let xpub = match fs::File::open(&dir.join(WALLET_PUBLIC_KEY)) {
-            Err(_err) => None, // TODO, check for file does not exists
-            Ok(mut file) => {
-                let mut key = [0;XPUB_SIZE];
-                file.read_exact(&mut key).unwrap();
-                Some(XPub::from_bytes(key))
-            }
-        };
+        let mut file = fs::File::open(&dir.join(WALLET_PUBLIC_KEY))?;
+        let mut pubkey = [0;XPUB_SIZE];
+        file.read_exact(&mut pubkey)?;
+        let xpub = XPub::from_bytes(pubkey);
 
-        Self::new(root_dir, name, cfg, key, xpub)
+        Ok(Self::new(root_dir, name, cfg, key, Some(xpub)))
     }
 
     /// lock the LOG file of the wallet for Read and/or Write operations
@@ -225,6 +223,16 @@ impl Wallet {
     }
 }
 
+fn load_config(
+    dir: &Path,
+) -> Result<Config> {
+    let file_path = dir.join(WALLET_CONFIG_FILE);
+    let mut file = fs::File::open(&file_path)
+        .map_err(|e| Error::WalletLoadFailed(e))?;
+    serde_yaml::from_reader(&mut file)
+        .map_err(|e| Error::BadWalletConfig(file_path, e))
+}
+
 pub struct Wallets(BTreeMap<WalletName, Wallet>);
 impl Wallets {
     pub fn new() -> Self { Wallets(BTreeMap::new())}
@@ -245,7 +253,7 @@ impl Wallets {
 
             if let Some(name) = WalletName::new(s) {
                 // load the wallet
-                let wallet = Wallet::load(root_dir.clone(), name);
+                let wallet = Wallet::load(root_dir.clone(), name)?;
                 wallets.insert(wallet.name.clone(), wallet);
             } else {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());

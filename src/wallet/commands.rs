@@ -190,7 +190,7 @@ pub fn destroy(
     name: WalletName,
 ) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(&root_dir, name);
+    let wallet = Wallet::load(&root_dir, name)?;
 
     writeln!(term, "You are about to destroy your wallet {}.
 This means that all the data associated to this wallet will be deleted on this device.
@@ -224,7 +224,7 @@ pub fn attach(
     blockchain_name: BlockchainName
 ) -> Result<()> {
     // load the wallet
-    let mut wallet = Wallet::load(&root_dir, name);
+    let mut wallet = Wallet::load(&root_dir, name)?;
 
     // 1. is the wallet already attached
     if let Some(ref bn) = wallet.config.attached_blockchain {
@@ -249,7 +249,7 @@ pub fn detach(
     name: WalletName,
 ) -> Result<()> {
     // load the wallet
-    let mut wallet = Wallet::load(&root_dir, name);
+    let mut wallet = Wallet::load(&root_dir, name)?;
 
     let blockchainname = wallet.config.attached_blockchain().unwrap();
 
@@ -278,7 +278,7 @@ pub fn status(
     name: WalletName,
 ) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(root_dir.clone(), name)?;
 
     if let Some(ref blk_name) = &wallet.config.attached_blockchain {
         term.simply("Wallet ").unwrap();
@@ -336,7 +336,7 @@ pub fn log(term: &mut Term,
     pretty: bool,
 ) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(root_dir.clone(), name)?;
 
     let mut state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
 
@@ -350,7 +350,7 @@ pub fn utxos(term: &mut Term,
     name: WalletName,
 ) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(root_dir.clone(), name)?;
 
     let state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
 
@@ -364,7 +364,7 @@ pub fn sync(term: &mut Term,
     name: WalletName,
 ) -> Result<()> {
     // 0. load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(root_dir.clone(), name)?;
 
     let blockchainname = wallet.config.attached_blockchain().unwrap();
 
@@ -400,7 +400,7 @@ pub fn address(
     index: u32,
 ) -> Result<()> {
     // load the wallet
-    let wallet = Wallet::load(root_dir.clone(), name);
+    let wallet = Wallet::load(root_dir.clone(), name)?;
 
     let addr = match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {

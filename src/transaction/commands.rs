@@ -402,7 +402,7 @@ pub fn input_select( term: &mut Term
     let outputs = staging.transaction().outputs().iter().map(|output| {
         output.into()
     }).collect::<Vec<_>>();
-    let inputs = list_input_inputs(term, root_dir.clone(), wallets);
+    let inputs = list_input_inputs(term, root_dir.clone(), wallets)?;
 
     let selection_result = match selection_type {
         SelectionPolicy::Blackjack(threshold) => {
@@ -456,10 +456,14 @@ fn find_input_in_all_utxos(term: &mut Term, root_dir: PathBuf, txid: TxId, index
     Err(Error::CannotFindInputsInAllLocalUtxos)
 }
 
-fn list_input_inputs(term: &mut Term, root_dir: PathBuf, wallets: Vec<WalletName>) -> Vec<::cardano::txutils::Input<ExtendedAddr>> {
+fn list_input_inputs(
+    term: &mut Term,
+    root_dir: PathBuf,
+    wallets: Vec<WalletName>
+) -> Result<Vec<::cardano::txutils::Input<ExtendedAddr>>, Error> {
     let mut inputs = Vec::new();
     for wallet in wallets {
-        let wallet = Wallet::load(root_dir.clone(), wallet);
+        let wallet = Wallet::load(root_dir.clone(), wallet)?;
         let state = wallet::utils::create_wallet_state_from_logs(term, &wallet, root_dir.clone(), wallet::state::lookup::accum::Accum::default());
 
         inputs.extend(state.utxos.iter().map(|(_, utxo)| {
@@ -473,5 +477,5 @@ fn list_input_inputs(term: &mut Term, root_dir: PathBuf, wallets: Vec<WalletName
         }))
     }
 
-    inputs
+    Ok(inputs)
 }

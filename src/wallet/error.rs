@@ -1,7 +1,9 @@
 use blockchain;
 use cardano::{bip::bip44, coin, hdwallet, wallet::rindex};
+use serde_yaml;
 use storage_units::utils::lock;
-use std::{error, fmt, io};
+
+use std::{error, fmt, io, path::PathBuf};
 
 use super::state::log;
 
@@ -14,6 +16,8 @@ pub enum Error {
     CannotRetrievePrivateKey(hdwallet::Error),
     CannotRetrievePrivateKeyInvalidPassword,
     CannotRecoverFromDaedalusMnemonics(rindex::Error),
+    BadWalletConfig(PathBuf, serde_yaml::Error),
+    WalletLoadFailed(io::Error),
     WalletDestroyFailed(io::Error),
     WalletDeleteLogFailed(io::Error),
     WalletLogAlreadyLocked(u32),
@@ -51,6 +55,8 @@ impl fmt::Display for Error {
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
             Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
             Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
+            Error::BadWalletConfig(ref path, _)            => write!(f, "Error in configuration file `{}`", path.to_string_lossy()),
+            Error::WalletLoadFailed(_)                     => write!(f, "Cannot load the wallet"),
             Error::WalletDestroyFailed(_)                  => write!(f, "Cannot destroy the wallet"),
             Error::WalletDeleteLogFailed(_)                => write!(f, "Cannot delete the wallet's log"),
             Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
@@ -69,6 +75,8 @@ impl error::Error for Error {
             Error::CannotRetrievePrivateKey(ref err)       => Some(err),
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),
+            Error::BadWalletConfig(_, ref err)             => Some(err),
+            Error::WalletLoadFailed(ref err)               => Some(err),
             Error::WalletDestroyFailed(ref err)            => Some(err),
             Error::WalletDeleteLogFailed(ref err)          => Some(err),
             Error::WalletLogAlreadyLocked(_)               => None,
