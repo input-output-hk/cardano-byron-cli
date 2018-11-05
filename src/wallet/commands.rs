@@ -179,6 +179,11 @@ where
     Ok(())
 }
 
+/// Destroy the wallet and remove all associated data.
+///
+/// **Caveat:** the files in storage are only unlinked on the filesystem
+/// level, the data on the physical medium are not erased.
+///
 pub fn destroy(
     term: &mut Term,
     root_dir: PathBuf,
