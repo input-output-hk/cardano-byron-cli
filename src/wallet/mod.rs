@@ -13,7 +13,13 @@ use self::config::{decrypt_primary_key};
 
 use self::state::log::{LogLock, LogWriter};
 
-use std::{fmt, path::PathBuf, fs, io::{Read, Write}, collections::{BTreeMap}};
+use std::{
+    collections::BTreeMap,
+    fmt, fs,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+
 use cardano::{wallet, hdwallet::{XPub, XPUB_SIZE}};
 use storage_units::utils::{tmpfile::{TmpFile}};
 use serde_yaml;
@@ -89,17 +95,23 @@ pub struct Wallet {
 impl Wallet {
 
     /// create a new wallet, we expect the key to have been properly encrypted
-    pub fn new(root_dir: PathBuf, name: WalletName, config: Config, encrypted_key: Vec<u8>, xpub: Option<XPub>) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        root_dir: P,
+        name: WalletName,
+        config: Config,
+        encrypted_key: Vec<u8>,
+        xpub: Option<XPub>
+    ) -> Self {
         Wallet {
             encrypted_key: encrypted_key,
             public_key: xpub,
-            root_dir: root_dir,
+            root_dir: root_dir.as_ref().to_path_buf(),
             name: name,
             config: config
         }
     }
 
-    pub unsafe fn destroy(self) -> ::std::io::Result<()> {
+    pub fn destroy(self) -> ::std::io::Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.0);
         ::std::fs::remove_dir_all(dir)
     }
@@ -134,8 +146,12 @@ impl Wallet {
         };
     }
 
-    pub fn load(root_dir: PathBuf, name: WalletName) -> Self {
-        let dir = config::directory(root_dir.clone(), &name.as_dirname());
+    pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Self {
+        Self::load_internal(root_dir.as_ref(), name)
+    }
+
+    fn load_internal(root_dir: &Path, name: WalletName) -> Self {
+        let dir = config::directory(root_dir, &name.as_dirname());
 
         let mut file = fs::File::open(&dir.join(WALLET_CONFIG_FILE))
             .unwrap();

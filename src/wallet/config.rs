@@ -1,4 +1,8 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
+
 use cardano::{hdwallet::{self, DerivationScheme}};
 
 use super::Error;
@@ -9,19 +13,14 @@ use blockchain::{BlockchainName, BlockchainNameError};
 /// directory where all the wallet will be in
 pub const WALLETS_DIRECTORY : &'static str = "wallets";
 
-pub fn wallet_directory( root_dir: &PathBuf
-                       ) -> PathBuf
-{
-    root_dir.join(WALLETS_DIRECTORY)
+pub fn wallet_directory<P: AsRef<Path>>(root_dir: P) -> PathBuf {
+    root_dir.as_ref().join(WALLETS_DIRECTORY)
 }
 
 /// handy function to compute the path to directory
 /// where all the wallet metadata will lie.
-pub fn directory( root_dir: PathBuf
-                , name: &str
-                ) -> PathBuf
-{
-    root_dir.join(WALLETS_DIRECTORY).join(name)
+pub fn directory<P: AsRef<Path>>(root_dir: P, name: &str) -> PathBuf {
+    root_dir.as_ref().join(WALLETS_DIRECTORY).join(name)
 }
 
 /// all the HDWallet supported models

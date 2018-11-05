@@ -19,7 +19,7 @@ pub enum Error {
     ForwardHashDoesNotExist(HeaderHash),
 
     GetBlockDoesNotExist(HeaderHash),
-    GetInvalidBLock(HeaderHash),
+    GetInvalidBlock(HeaderHash),
 
     CatMalformedBlock(cbor_event::Error),
 
@@ -54,7 +54,7 @@ impl fmt::Display for Error {
             Error::ListBlockchainInvalidName(_)              => write!(f, "Blockchain with invalid name"),
             Error::ForwardHashDoesNotExist(hh)               => write!(f, "Cannot forward the blockchain to non existant hash `{}`", hh),
             Error::GetBlockDoesNotExist(hh)                  => write!(f, "Block `{}` does not exist", hh),
-            Error::GetInvalidBLock(hh)                       => write!(f, "Block `{}` cannot be read from the local storage", hh),
+            Error::GetInvalidBlock(hh)                       => write!(f, "Block `{}` cannot be read from the local storage", hh),
             Error::CatMalformedBlock(_)                      => write!(f, "Unsupported or corrupted block"),
             Error::VerifyInvalidBlock(_)                     => write!(f, "Block is not valid"),
             Error::VerifyMalformedBlock(_)                   => write!(f, "Unsupported or corrupted block"),

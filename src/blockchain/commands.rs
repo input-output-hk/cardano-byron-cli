@@ -236,8 +236,7 @@ pub fn log( term: &mut Term
 
     let from = if let Some(hash) = from {
         if storage::block_location(&blockchain.storage, &hash).is_none() {
-            term.error(&format!("block hash `{}' is not present in the local blockchain\n", hash))?;
-            ::std::process::exit(1);
+            return Err(Error::GetInvalidBlock(hash));
         }
 
         hash
@@ -327,7 +326,7 @@ fn get_block(blockchain: &Blockchain, hash: &HeaderHash) -> Result<RawBlock>
         None        => {
             // this is a bug, we have a block location available for this hash
             // but we were not able to read the block.
-            return Err(Error::GetInvalidBLock(hash.clone()));
+            return Err(Error::GetInvalidBlock(hash.clone()));
         },
         Some(rblk) => Ok(rblk)
     }
