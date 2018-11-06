@@ -116,62 +116,78 @@ impl Wallet {
         ::std::fs::remove_dir_all(dir)
     }
 
-    pub fn save(&self) {
+    pub fn save(&self) -> Result<()> {
+        self.save_internal().map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletSaveFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn save_internal(&self) -> Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.0);
-        fs::DirBuilder::new().recursive(true).create(dir.clone())
-            .unwrap();
+
+        fs::DirBuilder::new().recursive(true).create(dir.clone())?;
 
         // 1. save the configuration file
-        let mut tmpfile = TmpFile::create(dir.clone())
-            .unwrap();
+        let mut tmpfile = TmpFile::create(dir.clone())?;
         serde_yaml::to_writer(&mut tmpfile, &self.config)
-            .unwrap();
-        tmpfile.render_permanent(&dir.join(WALLET_CONFIG_FILE))
-            .unwrap();
+            .map_err(|e| Error::ConfigWriteFailed(dir.clone(), e))?;
+        tmpfile.render_permanent(&dir.join(WALLET_CONFIG_FILE))?;
 
         // 2. save the encrypted key
-        let mut tmpfile = TmpFile::create(dir.clone())
-            .unwrap();
-        tmpfile.write(&self.encrypted_key).unwrap();
-        tmpfile.render_permanent(&dir.join(WALLET_PRIMARY_KEY))
-            .unwrap();
+        let mut tmpfile = TmpFile::create(dir.clone())?;
+        tmpfile.write(&self.encrypted_key)?;
+        tmpfile.render_permanent(&dir.join(WALLET_PRIMARY_KEY))?;
 
         // 3. save the public key
         if let Some(ref xpub) = self.public_key {
-            let mut tmpfile = TmpFile::create(dir.clone())
-                .unwrap();
+            let mut tmpfile = TmpFile::create(dir.clone())?;
             tmpfile.write(xpub.as_ref()).unwrap();
-            tmpfile.render_permanent(&dir.join(WALLET_PUBLIC_KEY))
-                .unwrap();
+            tmpfile.render_permanent(&dir.join(WALLET_PUBLIC_KEY))?;
         };
+
+        Ok(())
     }
 
-    pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Self {
+    pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Result<Self> {
         Self::load_internal(root_dir.as_ref(), name)
+            .map_err(|e| {
+                if let Error::IoError(io_err) = e {
+                    Error::WalletLoadFailed(io_err)
+                } else {
+                    e
+                }
+            })
     }
 
-    fn load_internal(root_dir: &Path, name: WalletName) -> Self {
+    fn load_internal(
+        root_dir: &Path,
+        name: WalletName,
+    ) -> Result<Self> {
         let dir = config::directory(root_dir, &name.as_dirname());
 
-        let mut file = fs::File::open(&dir.join(WALLET_CONFIG_FILE))
-            .unwrap();
-        let cfg = serde_yaml::from_reader(&mut file).unwrap();
+        let cfg_path = dir.join(WALLET_CONFIG_FILE);
+        let mut file = fs::File::open(&cfg_path)?;
+        let cfg = serde_yaml::from_reader(&mut file)
+            .map_err(|e| Error::ConfigReadFailed(cfg_path, e))?;
 
-        let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))
-            .unwrap();
+        let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))?;
         let mut key = Vec::with_capacity(150);
-        file.read_to_end(&mut key).unwrap();
+        file.read_to_end(&mut key)?;
 
         let xpub = match fs::File::open(&dir.join(WALLET_PUBLIC_KEY)) {
             Err(_err) => None, // TODO, check for file does not exists
             Ok(mut file) => {
                 let mut key = [0;XPUB_SIZE];
-                file.read_exact(&mut key).unwrap();
+                file.read_exact(&mut key)?;
                 Some(XPub::from_bytes(key))
             }
         };
 
-        Self::new(root_dir, name, cfg, key, xpub)
+        Ok(Self::new(root_dir, name, cfg, key, xpub))
     }
 
     /// lock the LOG file of the wallet for Read and/or Write operations
@@ -183,10 +199,20 @@ impl Wallet {
         Ok(writer.release_lock())
     }
 
-    pub fn delete_log(&self) -> ::std::io::Result<()> {
+    pub fn delete_log(&self) -> Result<()> {
+        self.delete_log_internal().map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletDeleteLogFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn delete_log_internal(&self) -> Result<()> {
         let dir = config::directory(self.root_dir.clone(), &self.name.as_dirname());
-        let lock = LogLock::acquire_wallet_log_lock(dir.clone()).unwrap();
-        lock.delete_wallet_log_lock(dir)
+        let lock = LogLock::acquire_wallet_log_lock(dir.clone())?;
+        Ok(lock.delete_wallet_log_lock(dir)?)
     }
 
     /// convenient function to reconstruct a BIP44 wallet from the encrypted key and password
@@ -229,23 +255,45 @@ pub struct Wallets(BTreeMap<WalletName, Wallet>);
 impl Wallets {
     pub fn new() -> Self { Wallets(BTreeMap::new())}
 
-    pub fn load(root_dir: PathBuf) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
+        Self::load_internal(root_dir.as_ref()).map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletsLoadFailed(io_err)
+            } else {
+                e
+            }
+        })
+    }
+
+    fn load_internal(root_dir: &Path) -> Result<Self> {
         let mut wallets = Wallets::new();
 
         let wallets_dir = config::wallet_directory(&root_dir);
-        for entry in ::std::fs::read_dir(wallets_dir).unwrap() {
-            let entry = entry.unwrap();
-            if ! entry.file_type().unwrap().is_dir() {
+        for entry in ::std::fs::read_dir(wallets_dir)? {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            if !file_type.is_dir() {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());
                 continue;
             }
-            let s = entry.file_name().into_string().unwrap_or_else(|err| {
-                panic!("invalid utf8... {:?}", err)
-            });
+            let s = match entry.file_name().into_string() {
+                Ok(s) => s,
+                Err(_) => {
+                    warn!("unexpected file in wallet directory: {:?}", entry.path());
+                    continue;
+                }
+            };
 
             if let Some(name) = WalletName::new(s) {
                 // load the wallet
-                let wallet = Wallet::load(root_dir.clone(), name);
+                let wallet = match Wallet::load(root_dir.clone(), name) {
+                    Ok(wallet) => wallet,
+                    Err(e) => {
+                        warn!("failed to load wallet in directory {:?}: {:?}",
+                            entry.path(), e);
+                        continue;
+                    }
+                };
                 wallets.insert(wallet.name.clone(), wallet);
             } else {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());
