@@ -12,6 +12,7 @@ use super::state::log;
 pub enum Error {
     IoError(io::Error),
     CannotLoadBlockchain(blockchain::Error),
+    BlockchainNameError(blockchain::BlockchainNameError),
     CoinError(coin::Error),
     Bip44AddressError(bip44::Error),
     CannotRetrievePrivateKey(hdwallet::Error),
@@ -26,6 +27,7 @@ pub enum Error {
     WalletLogAlreadyLocked(u32),
     WalletLogNotFound,
     WalletLogError(log::Error),
+    NotAttachedToBlockchain,
     AttachAlreadyAttached(String),
     WalletsLoadFailed(io::Error),
 }
@@ -34,6 +36,11 @@ impl From<io::Error> for Error {
 }
 impl From<blockchain::Error> for Error {
     fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
+}
+impl From<blockchain::BlockchainNameError> for Error {
+    fn from(e: blockchain::BlockchainNameError) -> Self {
+        Error::BlockchainNameError(e)
+    }
 }
 impl From<coin::Error> for Error {
     fn from(e: coin::Error) -> Self { Error::CoinError(e) }
@@ -58,6 +65,7 @@ impl fmt::Display for Error {
         match self {
             Error::IoError(_)                              => write!(f, "I/O error occurred"),
             Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
+            Error::BlockchainNameError(_)                  => write!(f, "Invalid blockchain name"),
             Error::CoinError(_)                            => write!(f, "Error with coin calculations"),
             Error::Bip44AddressError(_)                    => write!(f, "Error with BIP44 account addressing"),
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
@@ -72,6 +80,7 @@ impl fmt::Display for Error {
             Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
             Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
             Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
+            Error::NotAttachedToBlockchain                 => write!(f, "Wallet is not attached to any blockchain"),
             Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
             Error::WalletsLoadFailed(_)                    => write!(f, "Cannot load wallets"),
         }
@@ -82,6 +91,7 @@ impl error::Error for Error {
         match self {
             Error::IoError(ref err)                        => Some(err),
             Error::CannotLoadBlockchain(ref err)           => Some(err),
+            Error::BlockchainNameError(ref err)            => Some(err),
             Error::CoinError(ref err)                      => Some(err),
             Error::Bip44AddressError(ref err)              => Some(err),
             Error::CannotRetrievePrivateKey(ref err)       => Some(err),
@@ -96,6 +106,7 @@ impl error::Error for Error {
             Error::WalletLogAlreadyLocked(_)               => None,
             Error::WalletLogNotFound                       => None,
             Error::WalletLogError(ref err)                 => Some(err),
+            Error::NotAttachedToBlockchain                 => None,
             Error::AttachAlreadyAttached(_)                => None,
             Error::WalletsLoadFailed(ref err)              => Some(err),
         }

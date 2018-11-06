@@ -251,14 +251,11 @@ pub fn detach(
     // load the wallet
     let mut wallet = Wallet::load(&root_dir, name)?;
 
-    let blockchainname = wallet.config.attached_blockchain().unwrap();
-
     // 1. get the wallet's blockchain
     let _ = load_attached_blockchain(
-        term,
-        root_dir,
-        blockchainname
-    );
+        &root_dir,
+        &wallet.config,
+    )?;
 
     // 2. delete the wallet log
     wallet.delete_log()?;
@@ -366,10 +363,8 @@ pub fn sync(term: &mut Term,
     // 0. load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let blockchainname = wallet.config.attached_blockchain().unwrap();
-
     // 1. get the wallet's blockchain
-    let blockchain = load_attached_blockchain(term, root_dir.clone(), blockchainname);
+    let blockchain = load_attached_blockchain(&root_dir, &wallet.config)?;
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
