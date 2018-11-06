@@ -178,12 +178,16 @@ impl Wallet {
         let mut key = Vec::with_capacity(150);
         file.read_to_end(&mut key)?;
 
-        let mut file = fs::File::open(&dir.join(WALLET_PUBLIC_KEY))?;
-        let mut pubkey = [0;XPUB_SIZE];
-        file.read_exact(&mut pubkey)?;
-        let xpub = XPub::from_bytes(pubkey);
+        let xpub = match fs::File::open(&dir.join(WALLET_PUBLIC_KEY)) {
+            Err(_err) => None, // TODO, check for file does not exists
+            Ok(mut file) => {
+                let mut key = [0;XPUB_SIZE];
+                file.read_exact(&mut key)?;
+                Some(XPub::from_bytes(key))
+            }
+        };
 
-        Ok(Self::new(root_dir, name, cfg, key, Some(xpub)))
+        Ok(Self::new(root_dir, name, cfg, key, xpub))
     }
 
     /// lock the LOG file of the wallet for Read and/or Write operations
