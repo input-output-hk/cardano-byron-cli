@@ -225,6 +225,12 @@ impl Wallet {
     }
 }
 
+impl fmt::Display for Wallet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 pub struct Wallets(BTreeMap<WalletName, Wallet>);
 impl Wallets {
     pub fn new() -> Self { Wallets(BTreeMap::new())}
