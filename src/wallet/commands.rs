@@ -267,7 +267,7 @@ pub fn detach(
 
     wallet.save();
 
-    term.success("Wallet successfully attached to blockchain.\n").unwrap();
+    term.success("Wallet successfully detached from blockchain.\n").unwrap();
 
     Ok(())
 }
