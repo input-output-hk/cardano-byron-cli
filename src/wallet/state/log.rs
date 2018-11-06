@@ -1,6 +1,13 @@
 use storage_units::{append, utils::{serialize, lock::{self, Lock}}};
-use std::{path::{PathBuf}, fmt, result, io::{self, Read, Write}, error};
 use cardano::{block::{BlockDate, HeaderHash, types::EpochSlotId}};
+
+use std::{
+    error, fmt,
+    fs::remove_file,
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
+    result,
+};
 
 use super::{ptr::{StatePtr}, utxo::{UTxO}};
 
@@ -199,29 +206,48 @@ impl<A: fmt::Display> fmt::Display for Log<A> {
 
 const WALLET_LOG_FILE : &'static str = "LOG";
 
-pub struct LogLock(lock::Lock);
+pub struct LogLock {
+    lock: lock::Lock,
+    log_path: PathBuf,
+}
+
 impl LogLock {
-    /// function to acquire the lock on the log file of a given wallet
+    /// Acquires the lock on the log file of a given wallet.
     ///
     /// The lock will hold as long as the lifetime of the returned object.
-    pub fn acquire_wallet_log_lock(wallet_path: PathBuf) -> Result<Self> {
-        Ok(LogLock(Lock::lock(wallet_path.join(WALLET_LOG_FILE))?))
+    pub fn acquire<P: AsRef<Path>>(wallet_path: P) -> Result<Self> {
+        let log_path = wallet_path.as_ref().join(WALLET_LOG_FILE);
+        let lock = Lock::lock(log_path.clone())?;
+        Ok(LogLock { lock, log_path })
     }
 
-    pub fn delete_wallet_log_lock(self, wallet_path: PathBuf) -> ::std::io::Result<()> {
-        let file = wallet_path.join(WALLET_LOG_FILE);
-        ::std::fs::remove_file(file)
+    /// Deletes the wallet log file, consuming the lock object.
+    pub fn delete_wallet_log(self) -> Result<()> {
+        Ok(remove_file(self.log_path)?)
     }
 }
 
 /// Structure to read the Wallet Log one by one
-pub struct LogReader(append::Reader);
+pub struct LogReader {
+    inner: append::Reader,
+    log_path: PathBuf,
+}
+
 impl LogReader {
     pub fn open(locked: LogLock) -> Result<Self> {
-        Ok(LogReader(append::Reader::open(locked.0)?))
+        let inner = append::Reader::open(locked.lock)?;
+        Ok(LogReader {
+            inner,
+            log_path: locked.log_path,
+        })
     }
 
-    pub fn release_lock(self) -> LogLock { LogLock(self.0.close()) }
+    pub fn release_lock(self) -> LogLock {
+        LogLock {
+            lock: self.inner.close(),
+            log_path: self.log_path,
+        }
+    }
 
     pub fn into_iter<A>(self) -> LogIterator<A>
         where for<'de> A: serde::Deserialize<'de>
@@ -231,7 +257,7 @@ impl LogReader {
     pub fn next<A>(&mut self) -> Result<Option<Log<A>>>
         where for<'de> A: serde::Deserialize<'de>
     {
-        match self.0.next()? {
+        match self.inner.next()? {
             None => Ok(None),
             Some(bytes) => {
                 let log = Log::deserisalise(&bytes)?;
@@ -259,15 +285,32 @@ impl<A> Iterator for LogIterator<A>
     }
 }
 
-pub struct LogWriter(append::Writer);
+pub struct LogWriter {
+    inner: append::Writer,
+    log_path: PathBuf,
+}
+
 impl LogWriter {
     pub fn open(locked: LogLock) -> Result<Self> {
-        Ok(LogWriter(append::Writer::open(locked.0)?))
+        let inner = append::Writer::open(locked.lock)?;
+        Ok(LogWriter {
+            inner,
+            log_path: locked.log_path,
+        })
     }
 
-    pub fn release_lock(self) -> LogLock { LogLock(self.0.close()) }
+    pub fn release_lock(self) -> LogLock {
+        LogLock {
+            lock: self.inner.close(),
+            log_path: self.log_path,
+        }
+    }
 
-    pub fn append<A: serde::Serialize+fmt::Debug>(&mut self, log: &Log<A>) -> Result<()> {
-        Ok(self.0.append_bytes(&log.serialise()?)?)
+    pub fn append<A>(&mut self, log: &Log<A>) -> Result<()>
+    where
+        A: serde::Serialize + fmt::Debug,
+    {
+        let bytes = log.serialise()?;
+        Ok(self.inner.append_bytes(&bytes)?)
     }
 }
