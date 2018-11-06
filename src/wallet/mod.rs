@@ -286,7 +286,14 @@ impl Wallets {
 
             if let Some(name) = WalletName::new(s) {
                 // load the wallet
-                let wallet = Wallet::load(root_dir.clone(), name)?;
+                let wallet = match Wallet::load(root_dir.clone(), name) {
+                    Ok(wallet) => wallet,
+                    Err(e) => {
+                        warn!("failed to load wallet in directory {:?}: {:?}",
+                            entry.path(), e);
+                        continue;
+                    }
+                };
                 wallets.insert(wallet.name.clone(), wallet);
             } else {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());
