@@ -193,7 +193,7 @@ impl Wallet {
     /// lock the LOG file of the wallet for Read and/or Write operations
     pub fn log(&self) -> Result<LogLock> {
         let dir = config::directory(self.root_dir.clone(), &self.name.as_dirname());
-        let lock = LogLock::acquire_wallet_log_lock(dir)?;
+        let lock = LogLock::acquire(dir)?;
 
         let writer = LogWriter::open(lock)?;
         Ok(writer.release_lock())
@@ -210,9 +210,9 @@ impl Wallet {
     }
 
     fn delete_log_internal(&self) -> Result<()> {
-        let dir = config::directory(self.root_dir.clone(), &self.name.as_dirname());
-        let lock = LogLock::acquire_wallet_log_lock(dir.clone())?;
-        Ok(lock.delete_wallet_log_lock(dir)?)
+        let dir = config::directory(&self.root_dir, &self.name.as_dirname());
+        let lock = LogLock::acquire(&dir)?;
+        Ok(lock.delete_wallet_log()?)
     }
 
     /// convenient function to reconstruct a BIP44 wallet from the encrypted key and password
