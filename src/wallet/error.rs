@@ -5,7 +5,7 @@ use storage_units::utils::lock;
 
 use std::{error, fmt, io, path::PathBuf};
 
-use super::state::log;
+use super::state::{log, lookup};
 
 /// wallet errors
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub enum Error {
     CannotLoadBlockchain(blockchain::Error),
     BlockchainNameError(blockchain::BlockchainNameError),
     CoinError(coin::Error),
-    Bip44AddressError(bip44::Error),
+    AddressLookupError(lookup::AddressLookupError),
     CannotRetrievePrivateKey(hdwallet::Error),
     CannotRetrievePrivateKeyInvalidPassword,
     CannotRecoverFromDaedalusMnemonics(rindex::Error),
@@ -45,8 +45,11 @@ impl From<blockchain::BlockchainNameError> for Error {
 impl From<coin::Error> for Error {
     fn from(e: coin::Error) -> Self { Error::CoinError(e) }
 }
+impl From<lookup::AddressLookupError> for Error {
+    fn from(e: lookup::AddressLookupError) -> Self { Error::AddressLookupError(e) }
+}
 impl From<bip44::Error> for Error {
-    fn from(e: bip44::Error) -> Self { Error::Bip44AddressError(e) }
+    fn from(e: bip44::Error) -> Self { Error::AddressLookupError(e.into()) }
 }
 impl From<hdwallet::Error> for Error {
     fn from(e: hdwallet::Error) -> Self { Error::CannotRetrievePrivateKey(e) }
@@ -67,7 +70,7 @@ impl fmt::Display for Error {
             Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
             Error::BlockchainNameError(_)                  => write!(f, "Invalid blockchain name"),
             Error::CoinError(_)                            => write!(f, "Error with coin calculations"),
-            Error::Bip44AddressError(_)                    => write!(f, "Error with BIP44 account addressing"),
+            Error::AddressLookupError(_)                   => write!(f, "Error with account addressing"),
             Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
             Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
             Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
@@ -93,7 +96,7 @@ impl error::Error for Error {
             Error::CannotLoadBlockchain(ref err)           => Some(err),
             Error::BlockchainNameError(ref err)            => Some(err),
             Error::CoinError(ref err)                      => Some(err),
-            Error::Bip44AddressError(ref err)              => Some(err),
+            Error::AddressLookupError(ref err)             => Some(err),
             Error::CannotRetrievePrivateKey(ref err)       => Some(err),
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),

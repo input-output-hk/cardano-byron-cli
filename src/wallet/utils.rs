@@ -17,7 +17,7 @@ use blockchain::Blockchain;
 
 use std::{
     io::Write,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
@@ -199,37 +199,37 @@ pub fn dump_utxo<L>(term: &mut Term, ptr: StatePtr, utxo: UTxO<L>, debit: bool) 
     writeln!(term, "").unwrap()
 }
 
-
-pub fn create_wallet_state_from_logs<LS>(term: &mut Term, wallet: &Wallet, root_dir: PathBuf, lookup_structure: LS) -> state::State<LS>
-    where LS: lookup::AddressLookup
+pub fn create_wallet_state_from_logs<P, LS>(
+    wallet: &Wallet,
+    root_dir: P,
+    lookup_structure: LS
+) -> Result<state::State<LS>>
+where
+    P: AsRef<Path>,
+    LS: lookup::AddressLookup,
 {
-    // FIXME: should report errors nicely, see issue #39
+    pub use super::state::state::FromLogsError::*;
+
     let log_lock = lock_wallet_log(wallet);
-    let state = state::State::from_logs(lookup_structure,
-        log::LogReader::open(log_lock).unwrap_or_else(|e| term.fail_with(e))
-            .into_iter().filter_map(|r| {
-                match r {
-                    Err(err) => {
-                        term.fail_with(err)
-                    },
-                    Ok(v) => Some(v)
-                }
-            })
-    ).unwrap_or_else(|e| term.fail_with(e));
-    match state {
-        Ok(state) => state,
-        Err(lookup_structure) => {
+    let log_reader = log::LogReader::open(log_lock)?;
+    let log_iter = log_reader.into_iter();
+    let state_res = state::State::from_logs(lookup_structure, log_iter);
+    match state_res {
+        Ok(state) => Ok(state),
+        Err(NoEntries(lookup_structure)) => {
             // create empty state
             // 1. get the wallet's blockchain
             let blockchain = load_attached_blockchain(
-                root_dir,
+                root_dir.as_ref(),
                 &wallet.config,
-            ).unwrap();
+            )?;
 
             // 2. prepare the wallet state
             let initial_ptr = ptr::StatePtr::new_before_genesis(blockchain.config.genesis.clone());
-            state::State::new(initial_ptr, lookup_structure)
+            Ok(state::State::new(initial_ptr, lookup_structure))
         }
+        Err(LogReadFailed(e)) => Err(e.into()),
+        Err(AddressLookupFailed(e)) => Err(e.into()),
     }
 }
 
