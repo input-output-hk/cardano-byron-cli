@@ -89,13 +89,12 @@ pub fn decode_signed_tx() {
 }
 
 pub fn generate_xprv(output_prv: &str) {
-    let mut v = [0u8;32];
-    for x in v.iter_mut() {
+    let mut buf = [0u8;hdwallet::XPRV_SIZE];
+    for x in buf.iter_mut() {
         *x = rand::random()
     }
 
-    let seed = hdwallet::Seed::from_bytes(v) ;
-    let xprv = hdwallet::XPrv::generate_from_seed(&seed);
+    let xprv = hdwallet::XPrv::normalize_bytes(buf);
     let s = hex::encode(xprv.as_ref());
 
     let mut file = ::std::fs::OpenOptions::new().create(true).write(true).open(output_prv).unwrap();
