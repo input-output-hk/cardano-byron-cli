@@ -5,9 +5,15 @@
 //! adopt, this is in order to provide a consistent styling across
 //! the application.
 
-use console::{self};
+use console;
 
-use cardano::{hash, redeem, coin::{Coin}, block::{self, BlockDate, HeaderHash}, address::{self, ExtendedAddr}, config::ProtocolMagic, hdwallet};
+use cardano::{
+    address::{self, ExtendedAddr},
+    block::{self, BlockDate, HeaderHash},
+    coin::Coin,
+    config::ProtocolMagic,
+    hash, hdwallet, redeem,
+};
 
 pub use console::{StyledObject};
 
@@ -50,6 +56,16 @@ impl Style for BlockDate {
     }
 }
 impl Style for block::boundary::BodyProof {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self).yellow()
+    }
+}
+impl Style for block::normal::DlgProof {
+    fn style(self) -> StyledObject<Self> {
+        console::style(self).yellow()
+    }
+}
+impl Style for block::update::UpdateProof {
     fn style(self) -> StyledObject<Self> {
         console::style(self).yellow()
     }

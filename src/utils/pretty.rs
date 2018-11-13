@@ -1,6 +1,6 @@
 use std::{io::{Write, Result}};
 
-use cardano::block::{boundary, normal, types, Block};
+use cardano::block::{Block, boundary, normal, sign, types};
 use cardano::{address, tx};
 
 use super::term::style::{Style, StyledObject};
@@ -228,7 +228,7 @@ impl Pretty for normal::Consensus {
         pretty_attribute(f, indent, "leader_key", style!(self.leader_key))?;
         pretty_attribute(f, indent, "chain_difficulty", style!(self.chain_difficulty))?;
         match self.block_signature {
-            normal::BlockSignature::Signature(blk) => {
+            sign::BlockSignature::Signature(blk) => {
                 pretty_attribute(f, indent, "block_signature", style!(blk))?;
             },
             _ => {
@@ -246,12 +246,13 @@ impl Pretty for normal::BodyProof {
     {
         pretty_attribute(f, indent, "tx", self.tx)?;
         pretty_attribute(f, indent, "mpc", self.mpc)?;
-        pretty_attribute(f, indent, "proxy_sk", style!(self.proxy_sk))?;
+        pretty_attribute(f, indent, "delegation", style!(self.delegation))?;
         pretty_attribute(f, indent, "update", style!(self.update))?;
 
         Ok(())
     }
 }
+
 impl Pretty for tx::TxProof {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
         where W: Write
