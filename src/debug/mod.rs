@@ -94,7 +94,7 @@ pub fn generate_xprv(output_prv: &str) {
         *x = rand::random()
     }
 
-    let seed = hdwallet::Seed::from_bytes([0;32]) ;
+    let seed = hdwallet::Seed::from_bytes(v) ;
     let xprv = hdwallet::XPrv::generate_from_seed(&seed);
     let s = hex::encode(xprv.as_ref());
 
