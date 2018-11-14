@@ -3,8 +3,9 @@ pub mod epoch;
 
 pub use self::error::{Error, Result};
 
-use cardano::block::{Block, RawBlock, HeaderHash};
+use cardano::block::{Block, RawBlock};
 use cardano_storage::{self as storage, Storage};
+use storage_units::hash::BlockHash;
 
 enum IteratorType<'a> {
     Epoch(epoch::Epochs<'a>, Option<epoch::Iter>),
@@ -71,15 +72,31 @@ pub struct Iter<'a> {
 
     initialised: bool,
 
-    starting_from: HeaderHash,
-    ending_at: HeaderHash,
+    starting_from: BlockHash,
+    ending_at: BlockHash,
 
-    last_known_block_hash: Option<HeaderHash>,
+    last_known_block_hash: Option<BlockHash>,
 
     iterator: IteratorType<'a>
 }
+
 impl<'a> Iter<'a> {
-    pub fn new(storage: &'a Storage, from: HeaderHash, to: HeaderHash) -> Result<Self> {
+    pub fn new<H>(
+        storage: &'a Storage,
+        from: H,
+        to: H,
+    ) -> Result<Self>
+    where
+        H: Into<BlockHash>
+    {
+        Self::new_internal(storage, from.into(), to.into())
+    }
+
+    fn new_internal(
+        storage: &'a Storage,
+        from: BlockHash,
+        to: BlockHash,
+    ) -> Result<Self> {
         let iterator = match storage::block_location(&storage, &from) {
             None => {
                 return Err(Error::InvalidBlockHash(from));
@@ -87,9 +104,9 @@ impl<'a> Iter<'a> {
             Some(storage::BlockLocation::Loose) => {
                 let mut range = storage::iter::Range::new(
                     storage,
-                    *from.clone(),
-                    *to.clone()
-                ).unwrap(); // TODO
+                    from,
+                    to,
+                )?;
                 IteratorType::Loose(storage, range)
             },
             Some(location) => {
@@ -133,9 +150,9 @@ impl<'a> Iterator for Iter<'a> {
                     Ok(raw_block) => {
                         let block = raw_block.decode().unwrap();
                         let hh = block.get_header().compute_hash();
-                        let end = &hh == &self.starting_from;
+                        let end = *hh == self.starting_from;
                         next = Some(Ok((raw_block, block)));
-                        self.last_known_block_hash = Some(hh);
+                        self.last_known_block_hash = Some(*hh);
                         if end { break; }
                     }
                 }
@@ -148,8 +165,8 @@ impl<'a> Iterator for Iter<'a> {
                     if ! self.iterator.is_loose() {
                         let mut range = storage::iter::Range::new(
                             &self.storage,
-                            *self.last_known_block_hash.clone().unwrap(),
-                            *self.ending_at.clone()
+                            self.last_known_block_hash.clone().unwrap(),
+                            self.ending_at.clone()
                         ).unwrap(); // TODO
                         range.next(); // remove the last known block hash (it was the one in the last epoch)
                         self.iterator = IteratorType::Loose(&self.storage, range);
@@ -162,7 +179,7 @@ impl<'a> Iterator for Iter<'a> {
                 Some(Ok(raw_block)) => {
                     let block = raw_block.decode().unwrap();
                     let hh = block.get_header().compute_hash();
-                    self.last_known_block_hash = Some(hh);
+                    self.last_known_block_hash = Some(*hh);
                     Some(Ok((raw_block, block)))
                 }
             }
