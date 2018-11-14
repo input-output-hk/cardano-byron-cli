@@ -263,6 +263,49 @@ fn blockchain_argument_opt_headhash_match<'a>(term: &mut term::Term, matches: &A
     } else { None }
 }
 
+fn blockchain_argument_blockdate_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+    name: &str,
+) -> cardano::block::BlockDate {
+    match value_t!(matches, name, cardano::block::BlockDate) {
+        Ok(date) => date,
+        Err(err) => { term.fail_with(err) }
+    }
+}
+
+fn blockchain_argument_opt_blockdate_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+    name: &str,
+) -> Option<cardano::block::BlockDate> {
+    if matches.is_present(name) {
+        Some(blockchain_argument_blockdate_match(term, matches, name))
+    } else {
+        None
+    }
+}
+
+fn blockchain_argument_query_params_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+) -> blockchain::commands::QueryParams {
+    let start = blockchain_argument_opt_blockdate_match(
+        term,
+        matches,
+        "QUERY_START_DATE",
+    );
+    let end = blockchain_argument_opt_blockdate_match(
+        term,
+        matches,
+        "QUERY_END_DATE",
+    );
+    blockchain::commands::QueryParams {
+        start,
+        end,
+    }
+}
+
 fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     match matches.subcommand() {
         ("list", Some(matches)) => {
@@ -368,6 +411,13 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             let stop_on_error = matches.is_present("STOP_FIRST_ERROR");
 
             blockchain::commands::verify_chain(&mut term, root_dir, name, stop_on_error)
+                .unwrap_or_else(|e| term.fail_with(e));
+        },
+        ("query", Some(matches)) => {
+            let name = blockchain_argument_name_match(&mut term, &matches);
+            let params = blockchain_argument_query_params_match(&mut term, &matches);
+
+            blockchain::commands::query(&mut term, root_dir, name, params)
                 .unwrap_or_else(|e| term.fail_with(e));
         },
         _ => {
@@ -502,6 +552,22 @@ fn blockchain_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .short("werror")
                 .help("stop at the first error it found")
+            )
+        )
+        .subcommand(SubCommand::with_name("query")
+            .about("query blocks on the chain")
+            .arg(blockchain_argument_name_definition())
+            .arg(Arg::with_name("QUERY_START_DATE")
+                .required(false)
+                .long("start-date")
+                .value_name("BLOCKDATE")
+                .help("Block date to start from (defaults to genesis).")
+            )
+            .arg(Arg::with_name("QUERY_END_DATE")
+                .required(false)
+                .long("end-date")
+                .value_name("BLOCKDATE")
+                .help("Block date to end at (defaults to the local tip).")
             )
         )
 }
