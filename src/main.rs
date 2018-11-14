@@ -1166,6 +1166,15 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("decode-signed-tx", Some(_)) => {
             debug::decode_signed_tx();
         },
+        ("generate-xprv", Some(matches)) => {
+            let xprv_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
+            debug::generate_xprv(xprv_out);
+        },
+        ("xprv-to-xpub", Some(matches)) => {
+            let xprv_in = matches.value_of("INPUT_FILE").expect("INPUT_FILE");
+            let xpub_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
+            debug::xprv_to_xpub(xprv_in, xpub_out);
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1202,5 +1211,26 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("decode-signed-tx")
             .about("decode a signed transaction (TxAux)")
+        )
+        .subcommand(SubCommand::with_name("generate-xprv")
+            .about("generate a random valid XPrv")
+            .arg(Arg::with_name("OUTPUT_FILE")
+                .help("the path to output a brand new xprv")
+                .value_name("FILE")
+                .required(true)
+            )
+        )
+        .subcommand(SubCommand::with_name("xprv-to-xpub")
+            .about("generate the associated XPub from a XPrv")
+            .arg(Arg::with_name("INPUT_FILE")
+                .help("the path of a file containing an xprv")
+                .value_name("FILE")
+                .required(true)
+            )
+            .arg(Arg::with_name("OUTPUT_FILE")
+                .help("the path to output the associated xpub")
+                .value_name("FILE")
+                .required(true)
+            )
         )
 }

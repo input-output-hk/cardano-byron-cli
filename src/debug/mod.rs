@@ -1,8 +1,10 @@
 use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
 use cardano_storage::utxo;
+use cardano::hdwallet;
 use utils::term::{emoji, Term, style::Style};
-use std::{io::{self, Read}, str::FromStr};
+use std::{io::{self, Read, Write}, str::FromStr};
 use exe_common::parse_genesis_data;
+use rand;
 
 pub fn command_address( mut term: Term
                       , address: String
@@ -84,4 +86,39 @@ pub fn decode_signed_tx() {
     for (i, output) in txaux.tx.outputs.iter().enumerate() {
         println!(" - output ({}) {} {}", i, style!(&output.address), style!(&output.value));
     }
+}
+
+pub fn generate_xprv(output_prv: &str) {
+    let mut buf = [0u8;hdwallet::XPRV_SIZE];
+    for x in buf.iter_mut() {
+        *x = rand::random()
+    }
+
+    let xprv = hdwallet::XPrv::normalize_bytes(buf);
+    let s = hex::encode(xprv.as_ref());
+
+    let mut file = ::std::fs::OpenOptions::new().create(true).write(true).open(output_prv).unwrap();
+    file.write_all(s.as_ref()).unwrap();
+}
+
+pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
+    let xprv = {
+        let mut infile = ::std::fs::OpenOptions::new().read(true).open(input_priv).unwrap();
+        let mut v = Vec::new();
+        infile.read_to_end(&mut v).unwrap();
+        let s = String::from_utf8(v).unwrap();
+        let i = hex::decode(&s).unwrap();
+        if i.len() != hdwallet::XPRV_SIZE {
+            panic!("not containing an XPRV")
+        }
+
+        let mut xprv_data = [0u8;hdwallet::XPRV_SIZE];
+        xprv_data.copy_from_slice(&i[..]);
+        hdwallet::XPrv::from_bytes_verified(xprv_data).unwrap()
+    };
+    let xpub = xprv.public();
+    let s = hex::encode(xpub.as_ref());
+    let mut file = ::std::fs::OpenOptions::new().create(true).write(true).open(output_pub).unwrap();
+    file.write_all(s.as_ref()).unwrap();
+    ()
 }
