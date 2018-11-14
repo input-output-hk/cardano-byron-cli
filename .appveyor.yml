@@ -3,6 +3,7 @@
 
 clone_script:
   - cmd: >-
+      echo "Commit: %APPVEYOR_REPO_COMMIT% , Branch: %APPVEYOR_REPO_BRANCH% , Repo: %APPVEYOR_REPO_NAME% , Folder: %APPVEYOR_BUILD_FOLDER% "
       git clone -q --branch=%APPVEYOR_REPO_BRANCH% https://github.com/%APPVEYOR_REPO_NAME%.git %APPVEYOR_BUILD_FOLDER%
       && cd %APPVEYOR_BUILD_FOLDER%
       && git checkout -qf %APPVEYOR_REPO_COMMIT%
