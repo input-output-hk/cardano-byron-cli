@@ -1,3 +1,5 @@
+use cardano::block::HeaderHash;
+
 use std::{fmt, error};
 
 #[derive(Debug)]
@@ -5,6 +7,7 @@ pub enum Error {
     IoError(::std::io::Error),
     CborError(::cbor_event::Error),
     StorageError(::cardano_storage::Error),
+    InvalidBlockHash(HeaderHash),
 }
 impl From<::std::io::Error> for Error {
     fn from(e: ::std::io::Error) -> Self { Error::IoError(e) }
@@ -24,6 +27,9 @@ impl fmt::Display for Error {
             Error::IoError(_)      => write!(f, "I/O Error"),
             Error::CborError(_)    => write!(f, "Encoding error (CBOR)"),
             Error::StorageError(_) => write!(f, "Storage error"),
+            Error::InvalidBlockHash(h) => {
+                write!(f, "Invalid block hash {}", h)
+            }
         }
     }
 }
@@ -33,6 +39,7 @@ impl error::Error for Error {
             Error::IoError(ref err) => Some(err),
             Error::CborError(ref err) => Some(err),
             Error::StorageError(ref err) => Some(err),
+            Error::InvalidBlockHash(_) => None,
         }
     }
 }

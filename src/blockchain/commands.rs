@@ -244,7 +244,7 @@ pub fn log( term: &mut Term
         blockchain.load_tip().0.hash
     };
 
-    for block in storage::iter::ReverseIter::from(&blockchain.storage, from).unwrap() {
+    for block in storage::iter::ReverseIter::from(&blockchain.storage, from)? {
         use utils::pretty::Pretty;
 
         block.pretty(term, 0)?;
@@ -460,7 +460,7 @@ pub fn verify_chain( term: &mut Term
     let mut nr_blocks = 0;
     let mut chain_state = cardano::block::ChainState::new(&genesis_data);
 
-    for res in blockchain.iter_to_tip(blockchain.config.genesis.clone()).unwrap() {
+    for res in blockchain.iter_to_tip(blockchain.config.genesis.clone())? {
         let (_raw_blk, blk) = res.unwrap();
         nr_blocks += 1;
         let hash = blk.get_header().compute_hash();

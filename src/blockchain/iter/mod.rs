@@ -81,7 +81,9 @@ pub struct Iter<'a> {
 impl<'a> Iter<'a> {
     pub fn new(storage: &'a Storage, from: HeaderHash, to: HeaderHash) -> Result<Self> {
         let iterator = match storage::block_location(&storage, &from) {
-            None => panic!(),
+            None => {
+                return Err(Error::InvalidBlockHash(from));
+            }
             Some(storage::BlockLocation::Loose) => {
                 let mut range = storage::iter::Range::new(
                     storage,
