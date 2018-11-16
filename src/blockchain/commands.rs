@@ -10,6 +10,7 @@ use exe_common::parse_genesis_data;
 use exe_common::genesis_data;
 use super::{peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{self, block::{RawBlock, HeaderHash}};
+use cardano_storage::chain_state;
 
 /// function to create and initialize a given new blockchain
 ///
@@ -457,12 +458,10 @@ pub fn verify_chain( term: &mut Term
     }
 
     let mut bad_blocks = 0;
-    let mut nr_blocks = 0;
     let mut chain_state = cardano::block::ChainState::new(&genesis_data);
 
     for res in blockchain.iter_to_tip(blockchain.config.genesis.clone())? {
         let (_raw_blk, blk) = res.unwrap();
-        nr_blocks += 1;
         let hash = blk.get_header().compute_hash();
         match chain_state.verify_block(&hash, &blk) {
             Ok(()) => {},
@@ -480,9 +479,9 @@ pub fn verify_chain( term: &mut Term
     progress.finish();
 
     writeln!(term, "verification finished:")?;
-    writeln!(term, " * {} total blocks", style!(nr_blocks).green().bold())?;
+    writeln!(term, " * {} total blocks", style!(chain_state.chain_length).green().bold())?;
     writeln!(term, " * {} transactions", style!(chain_state.nr_transactions).green())?;
-    writeln!(term, " * {} spent outputs", style!(chain_state.spend_txos).cyan())?;
+    writeln!(term, " * {} spent outputs", style!(chain_state.spent_txos).cyan())?;
     writeln!(term, " * {} unspent outputs", style!(chain_state.utxos.len()).cyan().bold())?;
 
     if bad_blocks > 0 {

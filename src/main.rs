@@ -1160,9 +1160,6 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
         ("hash", Some(_)) => {
             debug::hash();
         },
-        ("decode-utxos", Some(_)) => {
-            debug::decode_utxos();
-        },
         ("decode-signed-tx", Some(_)) => {
             debug::decode_signed_tx();
         },

@@ -1,8 +1,7 @@
 use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
-use cardano_storage::utxo;
 use cardano::hdwallet;
 use utils::term::{emoji, Term, style::Style};
-use std::{io::{self, Read, Write}, str::FromStr};
+use std::{io::{self, Read, Write}};
 use exe_common::parse_genesis_data;
 use rand;
 
@@ -56,12 +55,6 @@ pub fn hash()
     let mut data = vec![];
     io::stdin().read_to_end(&mut data).expect("Cannot read stdin.");
     println!("{}", hash::Blake2b256::new(&data));
-}
-
-pub fn decode_utxos() {
-    let mut data = vec![];
-    io::stdin().read_to_end(&mut data).expect("Cannot read stdin.");
-    println!("{:?}", utxo::decode_utxo_file(&mut &data[..]).unwrap());
 }
 
 pub fn decode_signed_tx() {

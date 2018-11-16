@@ -10,7 +10,7 @@ use rand::random;
 
 use utils::{term::{Term, style::{Style}}, prompt};
 
-use blockchain::{self, Blockchain, BlockchainName};
+use blockchain::{Blockchain, BlockchainName};
 
 pub fn list(
     mut term: &mut Term,
