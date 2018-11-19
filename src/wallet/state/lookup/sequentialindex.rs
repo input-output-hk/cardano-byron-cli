@@ -2,12 +2,12 @@ use cardano::wallet::{bip44};
 use std::collections::BTreeMap;
 use cardano::{address::{ExtendedAddr, Addr}, hdwallet::XPrv};
 
-use super::{AddressLookup, Address};
+use super::{Address, AddressLookup, AddressLookupError};
 use super::super::{utxo::{UTxO}};
 
 pub const DEFAULT_GAP_LIMIT: u32 = 20;
 
-type Result<T> = bip44::bip44::Result<T>;
+type Result<T> = std::result::Result<T, AddressLookupError>;
 
 pub struct SequentialBip44Lookup {
     // cryptographic wallet
@@ -102,10 +102,17 @@ impl SequentialBip44Lookup {
     }
 }
 
-impl AddressLookup for SequentialBip44Lookup {
-    type Error = bip44::bip44::Error;
+impl From<bip44::bip44::Error> for AddressLookupError {
+    fn from(e: bip44::bip44::Error) -> Self {
+        AddressLookupError::SequentialBip44(e)
+    }
+}
 
-    fn lookup(&mut self, utxo: UTxO<ExtendedAddr>) -> Result<Option<UTxO<Address>>> {
+impl AddressLookup for SequentialBip44Lookup {
+    fn lookup(
+        &mut self,
+        utxo: UTxO<ExtendedAddr>
+    ) -> Result<Option<UTxO<Address>>> {
         let addressing = self.expected.get(&utxo.credited_address.to_address()).cloned();
         if let Some(addressing) = addressing {
             self.threshold_generate(addressing)?;
@@ -119,7 +126,7 @@ impl AddressLookup for SequentialBip44Lookup {
             Address::Bip44(address) => self.threshold_generate(address),
             addr => {
                 error!("unsupported address (expected bip44 addressing) {:#?}", addr);
-                Err(bip44::bip44::Error::InvalidType(0))
+                Err(bip44::bip44::Error::InvalidType(0).into())
             }
         }
     }

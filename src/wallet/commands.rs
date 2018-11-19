@@ -10,10 +10,10 @@ use rand::random;
 
 use utils::{term::{Term, style::{Style}}, prompt};
 
-use blockchain::{self, Blockchain, BlockchainName};
+use blockchain::{Blockchain, BlockchainName};
 
 pub fn list(
-    mut term: &mut Term,
+    term: &mut Term,
     root_dir: PathBuf,
     detailed: bool,
 ) -> Result<()> {
@@ -21,7 +21,11 @@ pub fn list(
     for (_, wallet) in wallets {
         let detail = if detailed {
             if let Some(blk_name) = &wallet.config.attached_blockchain {
-                let state = create_wallet_state_from_logs(&mut term, &wallet, root_dir.clone(), lookup::accum::Accum::default());
+                let state = create_wallet_state_from_logs(
+                    &wallet,
+                    &root_dir,
+                    lookup::accum::Accum::default(),
+                )?;
 
                 let total = state.total()?;
 
@@ -251,14 +255,11 @@ pub fn detach(
     // load the wallet
     let mut wallet = Wallet::load(&root_dir, name)?;
 
-    let blockchainname = wallet.config.attached_blockchain().unwrap();
-
     // 1. get the wallet's blockchain
     let _ = load_attached_blockchain(
-        term,
-        root_dir,
-        blockchainname
-    );
+        &root_dir,
+        &wallet.config,
+    )?;
 
     // 2. delete the wallet log
     wallet.delete_log()?;
@@ -300,11 +301,10 @@ pub fn status(
     term.simply("\n").unwrap();
 
     let state = create_wallet_state_from_logs(
-        term,
         &wallet,
         root_dir,
-        lookup::accum::Accum::default()
-    );
+        lookup::accum::Accum::default(),
+    )?;
 
     let total = state.total()?;
 
@@ -338,7 +338,11 @@ pub fn log(term: &mut Term,
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let mut state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
+    let mut state = create_wallet_state_from_logs(
+        &wallet,
+        &root_dir,
+        lookup::accum::Accum::default(),
+    )?;
 
     display_wallet_state_logs(term, &wallet, &mut state, pretty);
 
@@ -352,7 +356,11 @@ pub fn utxos(term: &mut Term,
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let state = create_wallet_state_from_logs(term, &wallet, root_dir, lookup::accum::Accum::default());
+    let state = create_wallet_state_from_logs(
+        &wallet,
+        &root_dir,
+        lookup::accum::Accum::default(),
+    )?;
 
     display_wallet_state_utxos(term, state);
 
@@ -366,23 +374,29 @@ pub fn sync(term: &mut Term,
     // 0. load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let blockchainname = wallet.config.attached_blockchain().unwrap();
-
     // 1. get the wallet's blockchain
-    let blockchain = load_attached_blockchain(term, root_dir.clone(), blockchainname);
+    let blockchain = load_attached_blockchain(&root_dir, &wallet.config)?;
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
             let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
             lookup_struct.prepare_next_account()?;
 
-            let mut state = create_wallet_state_from_logs(term, &wallet, root_dir.clone(), lookup_struct);
+            let mut state = create_wallet_state_from_logs(
+                &wallet,
+                &root_dir,
+                lookup_struct,
+            )?;
 
             update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
         },
         HDWalletModel::RandomIndex2Levels => {
             let lookup_struct = load_randomindex_lookup_structure(term, &wallet);
-            let mut state = create_wallet_state_from_logs(term, &wallet, root_dir.clone(), lookup_struct);
+            let mut state = create_wallet_state_from_logs(
+                &wallet,
+                &root_dir,
+                lookup_struct,
+            )?;
 
             update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
         },

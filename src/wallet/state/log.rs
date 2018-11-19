@@ -121,7 +121,7 @@ impl<A: serde::Serialize> Log<A> {
 impl<A> Log<A>
     where for<'de> A: serde::Deserialize<'de>
 {
-    fn deserisalise(bytes: &[u8]) -> Result<Self> {
+    fn deserialize(bytes: &[u8]) -> Result<Self> {
         let mut reader = bytes;
 
         {
@@ -260,7 +260,7 @@ impl LogReader {
         match self.inner.next()? {
             None => Ok(None),
             Some(bytes) => {
-                let log = Log::deserisalise(&bytes)?;
+                let log = Log::deserialize(&bytes)?;
                 Ok(Some(log))
             }
         }

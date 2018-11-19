@@ -2,7 +2,7 @@ use cardano::hdwallet;
 use cardano::{address::ExtendedAddr, hdwallet::XPrv};
 use cardano::wallet::rindex;
 
-use super::{AddressLookup, Address};
+use super::{Address, AddressLookup, AddressLookupError};
 use super::super::{utxo::{UTxO}};
 
 pub struct RandomIndexLookup {
@@ -30,15 +30,23 @@ impl RandomIndexLookup {
         self.generator.address(addr)
     }
 }
-impl AddressLookup for RandomIndexLookup {
-    type Error = rindex::Error;
 
+impl From<rindex::Error> for AddressLookupError {
+    fn from(e: rindex::Error) -> Self {
+        AddressLookupError::RandomIndex(e)
+    }
+}
+
+impl AddressLookup for RandomIndexLookup {
     /// Random index lookup is more a random index decryption and reconstruction method
     ///
     /// 1. we check if the input address contains a derivation_path (see cardano::address's ExtendedAddress);
     /// 2. we reconstruct the address with the derivation path and check it is actually one of ours;
     ///
-    fn lookup(&mut self, utxo: UTxO<ExtendedAddr>) -> Result<Option<UTxO<Address>>, Self::Error> {
+    fn lookup(
+        &mut self,
+        utxo: UTxO<ExtendedAddr>,
+    ) -> Result<Option<UTxO<Address>>, AddressLookupError> {
         let opt_addressing = self.generator.try_get_addressing(&utxo.credited_address)?;
 
         match opt_addressing {
@@ -49,7 +57,7 @@ impl AddressLookup for RandomIndexLookup {
                 if address != utxo.credited_address {
                     debug!("credited address:    {}", utxo.credited_address);
                     debug!("constructed address: {}", address);
-                    Err(rindex::Error::CannotReconstructAddress(address))
+                    Err(rindex::Error::CannotReconstructAddress(address).into())
                 } else {
                     Ok(Some(utxo.map(|_| addressing.into())))
                 }
@@ -62,7 +70,10 @@ impl AddressLookup for RandomIndexLookup {
     /// or state to update.
     ///
     /// This function does nothing and always succeeds
-    fn acknowledge<A: Into<Address>>(&mut self, _: A) -> Result<(), Self::Error> {
+    fn acknowledge<A: Into<Address>>(
+        &mut self,
+        _: A,
+    ) -> Result<(), AddressLookupError> {
         Ok(())
     }
 }

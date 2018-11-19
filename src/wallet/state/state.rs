@@ -1,7 +1,15 @@
-use super::utxo::{UTxO, UTxOs};
-use super::log::{Log};
-use super::{lookup::{AddressLookup, Address}, ptr::StatePtr};
+use super::{
+    log::{self, Log},
+    lookup::{Address, AddressLookup, AddressLookupError},
+    ptr::StatePtr,
+    utxo::{UTxO, UTxOs},
+};
 use cardano::{tx::TxoPointer, coin::{self, Coin}, address::ExtendedAddr};
+
+use std::{
+    error::Error,
+    fmt::{self, Debug, Display},
+};
 
 #[derive(Debug)]
 pub struct State<T: AddressLookup> {
@@ -10,17 +18,70 @@ pub struct State<T: AddressLookup> {
     pub utxos: UTxOs<Address>
 }
 
+/// Errors that may be returned by `State::from_log`.
+#[derive(Debug)]
+pub enum FromLogsError<T> {
+    /// No entries retrieved. Returns back the lookup structure.
+    NoEntries(T),
+    /// Error reported by the LogReader.
+    LogReadFailed(log::Error),
+    /// Failed to look up an address from the log.
+    AddressLookupFailed(AddressLookupError),
+}
+
+impl<T> From<log::Error> for FromLogsError<T> {
+    fn from(e: log::Error) -> Self {
+        FromLogsError::LogReadFailed(e)
+    }
+}
+
+impl<T> From<AddressLookupError> for FromLogsError<T> {
+    fn from(e: AddressLookupError) -> Self {
+        FromLogsError::AddressLookupFailed(e)
+    }
+}
+
+impl<T> Display for FromLogsError<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::FromLogsError::*;
+        match self {
+            NoEntries(_) => write!(f, "No entries in the log"),
+            LogReadFailed(_) => write!(f, "Failed to read log"),
+            AddressLookupFailed(_) => {
+                write!(f, "Failed to look up an address found in the log")
+            }
+        }
+    }
+}
+
+impl<T: Debug> Error for FromLogsError<T> {
+    fn cause(&self) -> Option<&Error> {
+        use self::FromLogsError::*;
+        match self {
+            NoEntries(_) => None,
+            LogReadFailed(err) => Some(err),
+            AddressLookupFailed(err) => Some(err),
+        }
+    }
+}
+
 impl<T: AddressLookup> State<T> {
     pub fn new(ptr: StatePtr, lookup_struct: T) -> Self {
         State { ptr: ptr, lookup_struct: lookup_struct, utxos: UTxOs::new() }
     }
 
-    pub fn from_logs<I: IntoIterator<Item = Log<Address>>>(mut lookup_struct: T, iter: I) -> Result<Result<Self, T>, T::Error>
+    pub fn from_logs<I>(
+        mut lookup_struct: T,
+        iter: I
+    ) -> Result<Self, FromLogsError<T>>
+    where
+        I: IntoIterator<Item = Result<Log<Address>, log::Error>>,
     {
         let mut ptr = None;
         let mut utxos = UTxOs::new();
 
-        for log in iter {
+        for entry in iter {
+            let log = entry?;
             match log {
                 Log::Checkpoint(known_ptr) => ptr = Some(known_ptr),
                 Log::ReceivedFund(known_ptr, utxo) => {
@@ -47,9 +108,13 @@ impl<T: AddressLookup> State<T> {
         }
 
         if let Some(ptr) = ptr {
-           Ok(Ok(State { ptr: ptr, lookup_struct: lookup_struct, utxos: utxos }))
+            Ok(State {
+                ptr: ptr,
+                lookup_struct: lookup_struct,
+                utxos: utxos,
+            })
         } else {
-            Ok(Err(lookup_struct))
+            Err(FromLogsError::NoEntries(lookup_struct))
         }
     }
 
@@ -64,8 +129,12 @@ impl<T: AddressLookup> State<T> {
             })
     }
 
-    pub fn forward_with_txins<'a, I>(&mut self, iter: I) -> Result<Vec<Log<Address>>, T::Error>
-        where I: IntoIterator<Item = (StatePtr, &'a TxoPointer)>
+    pub fn forward_with_txins<'a, I>(
+        &mut self,
+        iter: I,
+    ) -> Result<Vec<Log<Address>>, AddressLookupError>
+    where
+        I: IntoIterator<Item = (StatePtr, &'a TxoPointer)>,
     {
         let mut events = Vec::new();
         for (ptr, txin) in iter {
@@ -75,8 +144,13 @@ impl<T: AddressLookup> State<T> {
         }
         Ok(events)
     }
-    pub fn forward_with_utxos<I>(&mut self, iter: I) -> Result<Vec<Log<Address>>, T::Error>
-        where I: IntoIterator<Item = (StatePtr, UTxO<ExtendedAddr>)>
+
+    pub fn forward_with_utxos<I>(
+        &mut self,
+        iter: I,
+    ) -> Result<Vec<Log<Address>>, AddressLookupError>
+    where
+        I: IntoIterator<Item = (StatePtr, UTxO<ExtendedAddr>)>,
     {
         let mut events = Vec::new();
         for (ptr, utxo) in iter {

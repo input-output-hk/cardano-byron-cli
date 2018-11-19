@@ -1,15 +1,26 @@
-use std::{path::PathBuf, io::Write, iter, collections::BTreeMap};
 use utils::term::{Term, style::{Style}};
 use super::core::{self, StagingId, StagingTransaction};
 use super::error::Error;
 use super::super::blockchain::{Blockchain, BlockchainName};
-use super::super::wallet::{Wallets, Wallet, self, WalletName};
+use super::super::wallet::{
+    self,
+    Wallets, Wallet, WalletName,
+    state::lookup,
+    utils::create_wallet_state_from_logs,
+};
 use cardano::{
     tx::{self, Tx, TxId, TxoPointer, TxInWitness},
     coin::{Coin, sum_coins},
     address::{ExtendedAddr},
     fee::{LinearFee, FeeAlgorithm},
     wallet::scheme::{SelectionPolicy},
+};
+
+use std::{
+    collections::BTreeMap,
+    io::Write,
+    iter,
+    path::{Path, PathBuf},
 };
 
 
@@ -107,9 +118,19 @@ pub fn sign( term: &mut Term
     let mut signatures = Vec::new();
 
     let mut wallets = BTreeMap::new();
-    for (name, wallet) in Wallets::load(root_dir.clone()).unwrap() {
-        let state = wallet::utils::create_wallet_state_from_logs(term, &wallet, root_dir.clone(), wallet::state::lookup::accum::Accum::default());
-        wallets.insert(name, (wallet, state));
+    for (name, wallet) in Wallets::load(root_dir.clone())? {
+        match create_wallet_state_from_logs(
+            &wallet,
+            &root_dir,
+            lookup::accum::Accum::default(),
+        ) {
+            Ok(state) => {
+                wallets.insert(name, (wallet, state));
+            }
+            Err(e) => {
+                term.warn(&format!("cannot load wallet {}: {}", name, e)).unwrap();
+            }
+        }
     }
 
     let mut staging = load_staging(root_dir.clone(), id_str)?;
@@ -218,7 +239,7 @@ pub fn add_input( term: &mut Term
     let input = if let Some(input) = input {
         match input.2 {
             None => {
-                find_input_in_all_utxos(term, root_dir.clone(), input.0, input.1)?
+                find_input_in_all_utxos(&root_dir, input.0, input.1)?
             },
             Some(v) => {
                 core::Input {
@@ -402,7 +423,7 @@ pub fn input_select( term: &mut Term
     let outputs = staging.transaction().outputs().iter().map(|output| {
         output.into()
     }).collect::<Vec<_>>();
-    let inputs = list_input_inputs(term, root_dir.clone(), wallets)?;
+    let inputs = list_input_inputs(&root_dir, wallets)?;
 
     let selection_result = match selection_type {
         SelectionPolicy::Blackjack(threshold) => {
@@ -436,12 +457,25 @@ fn load_staging(root_dir: PathBuf, id_str: &str) -> Result<StagingTransaction, E
 
 // ----------------------------------- helpers ---------------------------------
 
-fn find_input_in_all_utxos(term: &mut Term, root_dir: PathBuf, txid: TxId, index: u32)
-    -> Result<core::Input, Error>
+fn find_input_in_all_utxos(
+    root_dir: &Path,
+    txid: TxId,
+    index: u32
+) -> Result<core::Input, Error>
 {
     let txin = TxoPointer { id: txid, index: index };
-    for (_, wallet) in Wallets::load(root_dir.clone()).unwrap() {
-        let state = wallet::utils::create_wallet_state_from_logs(term, &wallet, root_dir.clone(), wallet::state::lookup::accum::Accum::default());
+    for (_, wallet) in Wallets::load(root_dir)? {
+        let state = match create_wallet_state_from_logs(
+            &wallet,
+            &root_dir,
+            lookup::accum::Accum::default(),
+        ) {
+            Ok(state) => state,
+            Err(_) => {
+                // Silently ignore bad or unattached wallets
+                continue;
+            }
+        };
 
         if let Some(utxo) = state.utxos.get(&txin) {
             let txin = utxo.extract_txin();
@@ -457,14 +491,17 @@ fn find_input_in_all_utxos(term: &mut Term, root_dir: PathBuf, txid: TxId, index
 }
 
 fn list_input_inputs(
-    term: &mut Term,
-    root_dir: PathBuf,
+    root_dir: &Path,
     wallets: Vec<WalletName>
 ) -> Result<Vec<::cardano::txutils::Input<ExtendedAddr>>, Error> {
     let mut inputs = Vec::new();
     for wallet in wallets {
-        let wallet = Wallet::load(root_dir.clone(), wallet)?;
-        let state = wallet::utils::create_wallet_state_from_logs(term, &wallet, root_dir.clone(), wallet::state::lookup::accum::Accum::default());
+        let wallet = Wallet::load(root_dir, wallet)?;
+        let state = create_wallet_state_from_logs(
+            &wallet,
+            &root_dir,
+            lookup::accum::Accum::default(),
+        )?;
 
         inputs.extend(state.utxos.iter().map(|(_, utxo)| {
             let txin = utxo.extract_txin();
