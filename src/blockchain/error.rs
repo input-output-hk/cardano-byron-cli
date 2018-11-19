@@ -1,6 +1,6 @@
 use super::iter;
 use std::{io, fmt, error, path::PathBuf};
-use cardano::block::{self, HeaderHash};
+use cardano::block::{self, BlockDate, HeaderHash};
 use cardano_storage;
 use cbor_event;
 
@@ -31,6 +31,8 @@ pub enum Error {
     VerifyChainGenesisHashNotFound(HeaderHash),
     VerifyChainInvalidGenesisPrevHash(HeaderHash, HeaderHash), // (Expected, got)
     BlockchainIsNotValid(usize),
+
+    QueryBlockDateNotResolved(BlockDate),
 }
 
 impl From<io::Error> for Error {
@@ -68,6 +70,9 @@ impl fmt::Display for Error {
             Error::VerifyChainGenesisHashNotFound(hh)        => write!(f, "Genesis data for given blockchain not found ({})", hh),
             Error::VerifyChainInvalidGenesisPrevHash(eh, hh) => write!(f, "Genesis data invalid: expected previous hash {} different from the one provided {}", eh, hh),
             Error::BlockchainIsNotValid(num_invalid_blocks)  => write!(f, "Blockchain has {} invalid blocks", num_invalid_blocks),
+            Error::QueryBlockDateNotResolved(date) => {
+                write!(f, "Cannot resolve block date {}", date)
+            }
         }
     }
 }

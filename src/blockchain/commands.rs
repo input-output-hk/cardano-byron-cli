@@ -8,9 +8,11 @@ use utils::{term::{Term, style::Style}, time};
 
 use exe_common::parse_genesis_data;
 use exe_common::genesis_data;
-use super::{peer, Blockchain, Result, Error, BlockchainName};
-use cardano::{self, block::{RawBlock, HeaderHash}};
-use cardano_storage::chain_state;
+use super::{iter, peer, Blockchain, Result, Error, BlockchainName};
+use cardano::{
+    self,
+    block::{BlockDate, HeaderHash, RawBlock},
+};
 
 /// function to create and initialize a given new blockchain
 ///
@@ -489,4 +491,58 @@ pub fn verify_chain( term: &mut Term
     } else {
         Ok(writeln!(term, "{}", style!("Blockchain is in a valid state").green())?)
     }
+}
+
+pub struct QueryParams {
+    pub start: Option<BlockDate>,
+    pub end: Option<BlockDate>,
+}
+
+pub fn query(
+    term: &mut Term,
+    root_dir: PathBuf,
+    name: BlockchainName,
+    params: QueryParams,
+) -> Result<()> {
+    let blockchain = Blockchain::load(root_dir, name)?;
+    // FIXME: make blockchain.load_tip() return errors gracefully
+    let tip = blockchain.load_tip().0.hash;
+    let from = match params.start {
+        Some(date) => {
+            let resolved = storage::resolve_date_to_blockhash(
+                &blockchain.storage,
+                &tip,
+                &date
+            )?;
+            match resolved {
+                Some(hash) => hash,
+                None => {
+                    return Err(Error::QueryBlockDateNotResolved(date));
+                }
+            }
+        }
+        None => (*blockchain.config.genesis).clone(),
+    };
+    let to = match params.end {
+        Some(date) => {
+            let resolved = storage::resolve_date_to_blockhash(
+                &blockchain.storage,
+                &tip,
+                &date
+            )?;
+            match resolved {
+                Some(hash) => hash,
+                None => {
+                    return Err(Error::QueryBlockDateNotResolved(date));
+                }
+            }
+        }
+        None => (*tip).clone(),
+    };
+    for res in iter::Iter::new(&blockchain.storage, from, to)? {
+        let (_raw_blk, block) = res?;
+        let hash = block.get_header().compute_hash();
+        writeln!(term, "{}", style!(hash));
+    }
+    Ok(())
 }
