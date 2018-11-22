@@ -70,7 +70,7 @@ pub fn decode_signed_tx() {
         let valid = if signature_ok {
             emoji::CHECK_MARK
         } else {
-            emoji::CHECK_MARK
+            emoji::CROSS_MARK
         };
         println!(" - input ({}) {}.{} {}", i, style!(&input.id), style!(&input.index), valid);
     }
