@@ -101,9 +101,7 @@ wallets won't be able to interact with this blockchain.",
         ::console::style(&blockchain.name).bold().red(),
     )?;
 
-    let confirmation = ::dialoguer::Confirmation::new("Are you sure?")
-        .use_line_input(true)
-        .clear(false)
+    let confirmation = ::dialoguer::Confirmation::new().with_text("Are you sure?")
         .default(false)
         .interact()?;
     if confirmation {

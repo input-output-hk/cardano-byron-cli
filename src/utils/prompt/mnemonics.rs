@@ -7,16 +7,15 @@ fn interactive_input_word<D>(term: &mut Term, dic: &D, idx: usize, count: usize)
     where D: Language
 {
     loop {
-        let word = Input::new(&format!("mnemonic [{}/{}]", style(idx).cyan(), style(count).cyan().bold()))
-            .clear(true)
-            .interact_on(&term.term)
+        let word : String = Input::new().with_prompt(&format!("mnemonic [{}/{}]", style(idx).cyan(), style(count).cyan().bold()))
+            .interact()
             .unwrap();
 
         match dic.lookup_mnemonic(&word) {
             Ok(_) => return word,
             Err(bip39::dictionary::Error::MnemonicWordNotFoundInDictionary(_)) => {
                 let prompt = format!("`{}' is not a valid mnemonic word in `{}'", style(word).italic().red(), style(dic.name()).bold().white());
-                while ! Confirmation::new(&prompt).clear(true).default(true).show_default(true).interact_on(&term.term).unwrap() {}
+                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
             }
         }
     }
@@ -91,7 +90,7 @@ pub fn interactive_input_words<D>(term: &mut Term, dic: &D, size: bip39::Type) -
         match validate_mnemonics(dic, size, string) {
             Ok(res) => { return res; },
             Err(prompt) => {
-                while ! Confirmation::new(&prompt).clear(true).default(true).show_default(true).interact_on(&term.term).unwrap() {}
+                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
             }
         }
     }
@@ -103,15 +102,14 @@ pub fn input_mnemonic_phrase<D>(term: &mut Term, dic: &D, size: bip39::Type) -> 
     let count = size.mnemonic_count();
 
     loop {
-        let string = Input::new(&format!("Please enter all your {} mnemonics", style(count).bold().red()))
-            .clear(true)
-            .interact_on(&term.term)
+        let string = Input::new().with_prompt(&format!("Please enter all your {} mnemonics", style(count).bold().red()))
+            .interact()
             .unwrap();
 
         match validate_mnemonics(dic, size, string) {
             Ok(res) => { return res; },
             Err(prompt) => {
-                while ! Confirmation::new(&prompt).clear(true).default(true).show_default(true).interact_on(&term.term).unwrap() {}
+                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
             }
         }
     }

@@ -207,9 +207,7 @@ new transactions will be by recovering the wallet with the mnemonic words.",
     // methods that need to put the user through a confirmation dialog.
     // See issue #45
 
-    let confirmation = ::dialoguer::Confirmation::new("Are you sure?")
-        .use_line_input(true)
-        .clear(false)
+    let confirmation = ::dialoguer::Confirmation::new().with_text("Are you sure?")
         .default(false)
         .interact().unwrap();
     if ! confirmation { ::std::process::exit(0); }
