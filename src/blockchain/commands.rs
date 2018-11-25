@@ -6,8 +6,6 @@ use cardano_storage as storage;
 
 use utils::{term::{Term, style::Style}, time};
 
-use exe_common::parse_genesis_data;
-use exe_common::genesis_data;
 use super::{iter, peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{
     self,
@@ -446,12 +444,7 @@ pub fn verify_chain( term: &mut Term
     let progress = term.progress_bar(num_blocks as u64);
     progress.set_message("verifying blocks... ");
 
-    let genesis_data = {
-        let genesis_data = genesis_data::get_genesis_data(&blockchain.config.genesis_prev)
-            .map_err(Error::VerifyChainGenesisHashNotFound)?;
-
-        parse_genesis_data::parse_genesis_data(genesis_data.as_bytes())
-    };
+    let genesis_data = blockchain.load_genesis_data()?;
 
     if genesis_data.genesis_prev != blockchain.config.genesis_prev {
         return Err(Error::VerifyChainInvalidGenesisPrevHash(blockchain.config.genesis_prev, genesis_data.genesis_prev));
