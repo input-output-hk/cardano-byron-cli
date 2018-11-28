@@ -3,7 +3,7 @@ The command line is split into multiple subcommands
 * `blockchain`: all the blockchain related tooling;
 * `wallet`: create, recover and manage wallets;
 * `transaction`: to build, review and sign transactions;
-* `debug`: extra handy toolings.
+* `debug`: extra handy tooling.
 
 # global options and environment variables
 
@@ -41,13 +41,13 @@ Within the global options, the more interesting ones are the
 ### Local blockchains
 
 This is the foundation on which the **CLI** is based on. You need to have a local
-copy of the blockchain you are working with. You can have has many local copy of any
-of the cardano blockchain (`mainnet`, `testnet` or `staging`).
+copy of the blockchain you are working with. You can have many local copies of any
+of the cardano blockchains (`mainnet`, `testnet` or `staging`).
 
 The storage of the blockchain has been done in an efficient way. Utilising less disk
 space than other of the cardano tooling yet.
 
-To list all the local blockchain, simply use the following command:
+To list all the local blockchains, simply use the following command:
 
 ```
 cardano-cli blockchain list
@@ -56,7 +56,7 @@ cardano-cli blockchain list
 _hint_: add `--detailed` for more general information regarding the local blockchains
 
 You can create as many local blockchains as you want (limited to space disk though) and because
-it is allowed to have 1 or more copy of mainnet you can use aliases to these blockchains.
+it is allowed to have 1 or more copies of mainnet you can use aliases to these blockchains.
 
 ```
 cardano-cli blockchain new mainnet-copy-1
@@ -88,23 +88,23 @@ cardano-cli blockchain remote-ls testnet`
 _hint_: try `--detailed` for more details about the status of the remotes, and `--complete`
 (necessitate network connection) for a comparative review of the local states and the remotes'.
 
-And now, to fetch the block you can either use `remote-sync` or `pull` commands. The later
+And now, to fetch the block you can either use `remote-sync` or `pull` commands. The latter
 will also `forward` the state of the local blockchain to the latest block within the remotes.
 
 ```
 cardano-cli blockchain remote-fetch testnet
 ```
 
-_hint_: for fast download try `remove-fetch testnet hermes` first.
+_hint_: for fast download try `remote-fetch testnet hermes` first.
 
-Now that you have downloaded the block from the remotes. You need to chose which of the new
-block will be the next _tip_ of your local copy.
+Now that you have downloaded the block from the remotes, you need to choose which of the new
+blocks will be the next _tip_ of your local copy.
 
 ```
 cardano-cli blockchain forward testnet a928cb61b01...
 ```
 
-Or you can let the CLI chose for you the next tip by ommiting the block hash parameter.
+Or you can let the CLI choose for you the next tip by omitting the block hash parameter.
 
 _hint_: use `pull` command to combine `remote-fetch` and `forward`.
 
@@ -117,7 +117,7 @@ You can list **all** the blocks of a given blockchain with the following command
 cardano-cli blockchain log testnet
 ```
 
-Or you can specify a blockhash to start listing the block of the blockchain from a given block
+Or you can specify a block hash to start listing the blocks of the blockchain from a given block
 instead of the local tip.
 
 To get information about a given block in particular, simply use the `cat` command:
@@ -128,30 +128,30 @@ cardano-cli blockchain cat testnet 87283e69ae2a245ff40e405706ac8ba5806c79d1914c2
 
 ## `wallet`commands
 
-here lies all the operation relating to wallet manegement. The wallet is independant from
+Here lie all the operations relating to wallet management. The wallet is independent from
 the blockchain itself. It contains only the cryptographic material of the wallet as well
-as some details and flavor of the wallet (derivation's scheme, HD scheme etc...).
-For security reason the cryptographic materials are stored encrypted. The password to
+as some details and flavors of the wallet (derivation's scheme, HD scheme etc...).
+For security reasons the cryptographic materials are stored encrypted. The password to
 store the cryptographic material is called a **spending password**. It is recommended
 to set one.
 
 ### Creating a new wallet
 
-It is possible to create new wallet with the `cardano-cli`. The command is `create`
+It is possible to create a new wallet with `cardano-cli`. The command is `create`
 and it takes the name of the wallet you want to create.
 
 ```
 cardano-cli wallet create WalletName
 ```
 
-You will be prompted to enter 2 kind of password:
+You will be prompted to enter 2 kinds of password:
 
 1. the first one is the password associated to the mnemonics of your wallet. Meaning
    that you will **_always_** need this secret associated to your mnemonics to recover
    the wallet.
 2. the second one is the spending password. More generally it is the password that
    we use to encrypt your private key in the persistent data of the wallet.
-   This password does not affect the recovering of the wallet. If you loose it you can
+   This password does not affect the recovering of the wallet. If you lose it you can
    still recover your wallet with the mnemonics (and the mnemonics' password if any).
 
 ### Recovering a wallet
@@ -164,7 +164,7 @@ the mnemonics will be asked one by one.
 #### Recovering a Daedalus wallet
 
 For various reasons the CLI does not allow to create Daedalus compatible wallet.
-But it is possible to recover a wallet created on the Daeaalus application.
+But it is possible to recover a wallet created on the Daedalus application.
 
 ```
 cardano-cli wallet recover --daedalus-seed --derivation-scheme=v1 --mnemonics-length=12 --wallet-scheme=random_index_2levels MyDaedalusWallet
@@ -173,7 +173,7 @@ cardano-cli wallet recover --daedalus-seed --derivation-scheme=v1 --mnemonics-le
 And that's it, you will your daedalus wallet recovered here. No need to transfer
 the funds to another address yet (and therefor save some transaction fees).
 
-#### Recovering an Icaus wallet
+#### Recovering an Icarus wallet
 
 To recover an Icarus wallet, that's easy, only set the mnemonic length to 15.
 By default Icarus wallets are using the same security settings as the `cardano-cli`.
@@ -193,7 +193,7 @@ You need to attach the wallet to a blockchain.
 cardano-cli wallet attach MyWallet BlockchainName
 ```
 
-Now you can sync your wallet agains the blockchain (i.e. recovering the transaction
+Now you can sync your wallet against the blockchain (i.e. recovering the transaction
 histories and the available funds (UTxOs)). The `sync` command will analyse all the
 blocks of the attached blockchain and will recover the owned addresses. The `sync`
 will stop when the _local tip_ of the blockchain will be reached. If you don't see
@@ -223,7 +223,7 @@ only for one ~tiny~ part of the transaction creation (the signing part).
 All the preparation or the sending of the transaction to the network
 does not need a wallet. Actually it does not need wallets at all.
 
-This model allows to build transation using funds from different wallets.
+This model allows you to build transactions using funds from different wallets.
 You can then:
 
 * split the bills (asks participants to commit funds to the transactions);
@@ -274,7 +274,7 @@ cardano-cli transaction ${STAGING_ID} ${TxId} ${Index}
 or use the ready to use input select:
 
 ```bash
-cardano-cli transation input-select ${STAGING_ID} ${WALLET_ALIAS1} ${WALLET_ALIAS2} # ...
+cardano-cli transaction input-select ${STAGING_ID} ${WALLET_ALIAS1} ${WALLET_ALIAS2} # ...
 ```
 
 This algorithm will select all the needed inputs from the given wallet(s).
@@ -286,14 +286,14 @@ There are 2 supported algorithms at the moment:
 * `--select-exact-inputs=MAX_EXTRA_FEES` this one tries to select only the required inputs accepting
   to lose up to the given `MAX_EXTRA_FEES`.
 
-### Finalizing the transation
+### Finalizing the transaction
 
-Finalizing the transaction does one useful action: it rebalance the outputs
-and the change address: all the left over ada will be refunded to the given
+Finalizing the transaction does one useful action: It rebalances the outputs
+and the change address. All the left over ada will be refunded to the given
 change address.
 
 ```bash
-cardano-cli transation finalize ${STAGING_ID}
+cardano-cli transaction finalize ${STAGING_ID}
 ```
 
 ### Signing and Sending a transaction to the network
@@ -301,7 +301,7 @@ cardano-cli transation finalize ${STAGING_ID}
 Now the transaction is ready, you can sign it then send it:
 
 ```bash
-cardano-cli transation sign ${STAGING_ID} ${MY_WALLET}
+cardano-cli transaction sign ${STAGING_ID} ${MY_WALLET}
 ```
 
 and to send it, nothing more easy
@@ -311,8 +311,8 @@ and to send it, nothing more easy
 > before sending it.
 
 ```bash
-cardano-cli transation status ${STAGING_ID} ${MY_WALLET}
-cardano-cli transation send ${STAGING_ID} staging
+cardano-cli transaction status ${STAGING_ID} ${MY_WALLET}
+cardano-cli transaction send ${STAGING_ID} staging
 ```
 
 # Commands documentation
@@ -363,7 +363,7 @@ FLAGS:
 
 ### `blockchain log`
 
-print the block, one by one, from the given blockhash or the tip of the blockchain.
+print the block, one by one, from the given block hash or the tip of the blockchain.
 
 USAGE:
 
