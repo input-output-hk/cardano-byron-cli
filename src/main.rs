@@ -376,8 +376,13 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
             let hash = blockchain_argument_headhash_match(&mut term, matches, "HASH_BLOCK");
             let no_parse = matches.is_present("BLOCK_NO_PARSE");
             let debug = matches.is_present("DEBUG");
+            let encode_type = if matches.is_present("OUTPUT_RAW") {
+                Some(value_t_or_exit!(matches.value_of("OUTPUT_RAW"), blockchain::commands::RawEncodeType))
+            } else {
+                None
+            };
 
-            blockchain::commands::cat(&mut term, root_dir, name, hash, no_parse, debug)
+            blockchain::commands::cat(&mut term, root_dir, name, hash, no_parse, debug, encode_type)
                 .unwrap_or_else(|e| term.fail_with(e));
         },
         ("status", Some(matches)) => {
@@ -517,6 +522,12 @@ fn blockchain_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .arg(Arg::with_name("DEBUG")
                 .long("debug")
                 .help("dump the block in debug format")
+            )
+            .arg(Arg::from_usage("[OUTPUT_RAW] --output-raw=[format]")
+                .help("dump the block in the specified raw format format")
+                .possible_values(&blockchain::commands::RawEncodeType::variants())
+                .case_insensitive(true)
+                .conflicts_with_all(&["DEBUG", "BLOCK_NO_PARSE"])
             )
         )
         .subcommand(SubCommand::with_name("status")

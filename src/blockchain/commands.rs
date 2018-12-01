@@ -12,6 +12,7 @@ use super::{iter, peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{
     self,
     block::{BlockDate, HeaderHash, RawBlock},
+    util::hex,
 };
 
 /// function to create and initialize a given new blockchain
@@ -333,12 +334,21 @@ fn get_block(blockchain: &Blockchain, hash: &HeaderHash) -> Result<RawBlock>
     }
 }
 
+arg_enum!{
+    #[derive(Debug)]
+    pub enum RawEncodeType {
+        Hex,
+        Base64,
+    }
+}
+
 pub fn cat( term: &mut Term
           , root_dir: PathBuf
           , name: BlockchainName
           , hash: HeaderHash
           , no_parse: bool
           , debug: bool
+          , output_raw: Option<RawEncodeType>
           )
     -> Result<()>
 {
@@ -349,13 +359,23 @@ pub fn cat( term: &mut Term
         ::std::io::stdout().write(rblk.as_ref())?;
         ::std::io::stdout().flush()?;
     } else {
-        use utils::pretty::Pretty;
+        match output_raw {
+            Some(RawEncodeType::Hex)    => {
+                write!(term, "{}", hex::encode(rblk.as_ref()))?;
+            },
+            Some(RawEncodeType::Base64) => {
+                write!(term, "{}", base64::encode(rblk.as_ref()))?;
+            },
+            None => {
+                use utils::pretty::Pretty;
 
-        let blk = rblk.decode().map_err(Error::CatMalformedBlock)?;
-        if debug {
-            writeln!(term, "{:#?}", blk)?;
-        } else {
-            blk.pretty(term, 0)?;
+                let blk = rblk.decode().map_err(Error::CatMalformedBlock)?;
+                if debug {
+                    writeln!(term, "{:#?}", blk)?;
+                } else {
+                    blk.pretty(term, 0)?;
+                }
+            },
         }
     }
 
