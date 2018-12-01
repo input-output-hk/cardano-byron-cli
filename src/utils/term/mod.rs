@@ -73,7 +73,7 @@ impl Term {
     }
 
     pub fn prompt(&mut self, prompt: &str) -> io::Result<String> {
-        dialoguer::Input::new(prompt).interact()
+        dialoguer::Input::new().with_prompt(prompt).interact()
     }
 
     pub fn password(&mut self, prompt: &str) -> io::Result<String> {
@@ -82,14 +82,14 @@ impl Term {
             // TODO: there seems to be an issue with rust crate: console
             //       the password read line is not working or not returning
             //       at all on windows 10 's `cmd` or `PowerShell`
-            let line = dialoguer::Input::new(prompt).default("").interact()?;
+            let line = dialoguer::Input::new().with_prompt(prompt).default("").interact()?;
             self.term.move_cursor_up(1)?;
             self.term.clear_line()?;
             Ok(line)
         }
         #[cfg(not(windows))]
         {
-            dialoguer::PasswordInput::new(prompt).allow_empty_password(true).interact()
+            dialoguer::PasswordInput::new().with_prompt(prompt).allow_empty_password(true).interact()
         }
     }
 
@@ -100,10 +100,10 @@ impl Term {
                 // TODO: there seems to be an issue with rust crate: console
                 //       the password read line is not working or not returning
                 //       at all on windows 10 's `cmd` or `PowerShell`
-                let line = dialoguer::Input::new(prompt).default("").interact()?;
+                let line = dialoguer::Input::new().with_prompt(prompt).default("").interact()?;
                 self.term.move_cursor_up(1)?;
                 self.term.clear_line()?;
-                let line2 = dialoguer::Input::new(confirmation).default("").interact()?;
+                let line2 = dialoguer::Input::new().with_prompt(confirmation).default("").interact()?;
                 self.term.move_cursor_up(1)?;
                 self.term.clear_line()?;
                 if line == line2 {
@@ -114,9 +114,10 @@ impl Term {
         }
         #[cfg(not(windows))]
         {
-            dialoguer::PasswordInput::new(prompt)
+            dialoguer::PasswordInput::new()
+                .with_prompt(prompt)
                 .allow_empty_password(true)
-                .confirm(confirmation, mismatch_err)
+                .with_confirmation(confirmation, mismatch_err)
                 .interact()
         }
     }
