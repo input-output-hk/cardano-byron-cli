@@ -1,24 +1,26 @@
 use cardano::hdwallet;
 use cardano::{address::ExtendedAddr, hdwallet::XPrv};
 use cardano::wallet::rindex;
+use cardano::config::NetworkMagic;
 
 use super::{Address, AddressLookup, AddressLookupError};
 use super::super::{utxo::{UTxO}};
 
 pub struct RandomIndexLookup {
-    generator: rindex::AddressGenerator<hdwallet::XPrv>
-}
-impl From<rindex::Wallet> for RandomIndexLookup {
-    fn from(wallet: rindex::Wallet) -> Self {
-        RandomIndexLookup {
-            generator: wallet.address_generator()
-        }
-    }
+    generator: rindex::AddressGenerator<hdwallet::XPrv>,
+    network_magic: NetworkMagic,
 }
 impl RandomIndexLookup {
-    pub fn new(generator: rindex::AddressGenerator<hdwallet::XPrv>) -> Self {
+    pub fn from_wallet(wallet: rindex::Wallet, network_magic: NetworkMagic) -> Self {
         RandomIndexLookup {
-            generator
+            generator: wallet.address_generator(),
+            network_magic: network_magic,
+        }
+    }
+    pub fn new(generator: rindex::AddressGenerator<hdwallet::XPrv>, network_magic: NetworkMagic) -> Self {
+        RandomIndexLookup {
+            generator,
+            network_magic
         }
     }
 
@@ -27,7 +29,7 @@ impl RandomIndexLookup {
     }
 
     pub fn get_address(&self, addr: &rindex::Addressing) -> ExtendedAddr {
-        self.generator.address(addr)
+        self.generator.address(addr, self.network_magic)
     }
 }
 

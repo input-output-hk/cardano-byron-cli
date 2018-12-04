@@ -9,7 +9,7 @@ use super::config::{Config, HDWalletModel};
 use super::error::{Error, Result};
 use super::state::{log, ptr, state, lookup, iter::TransactionIterator, utxo::UTxO, ptr::{StatePtr}};
 
-use cardano::{address::ExtendedAddr, block::{BlockDate}, config::ProtocolMagic, tx::{TxInWitness, TxId}};
+use cardano::{address::ExtendedAddr, block::{BlockDate}, config::{ProtocolMagic, NetworkMagic}, tx::{TxInWitness, TxId}};
 
 use utils::{term::{Term, style::{Style}}};
 
@@ -233,7 +233,7 @@ where
     }
 }
 
-pub fn load_bip44_lookup_structure(term: &mut Term, wallet: &Wallet) -> lookup::sequentialindex::SequentialBip44Lookup {
+pub fn load_bip44_lookup_structure(term: &mut Term, network_magic: NetworkMagic, wallet: &Wallet) -> lookup::sequentialindex::SequentialBip44Lookup {
     // TODO: to prevent from the need of the password, we can ask the user to create accounts ahead.
     //       if we store the wallet's account public keys in the config file we may not need for the
     //       password (and for the private key).
@@ -256,9 +256,9 @@ pub fn load_bip44_lookup_structure(term: &mut Term, wallet: &Wallet) -> lookup::
         },
         Ok(wallet) => { wallet }
     };
-    lookup::sequentialindex::SequentialBip44Lookup::new(wallet)
+    lookup::sequentialindex::SequentialBip44Lookup::new(wallet, network_magic)
 }
-pub fn load_randomindex_lookup_structure(term: &mut Term, wallet: &Wallet) -> lookup::randomindex::RandomIndexLookup {
+pub fn load_randomindex_lookup_structure(term: &mut Term, network_magic: NetworkMagic, wallet: &Wallet) -> lookup::randomindex::RandomIndexLookup {
     // in the case of the random index, we may not need the password if we have the public key
     term.info("Enter the wallet password.\n").unwrap();
     let password = term.password("wallet password: ").unwrap();
@@ -279,7 +279,7 @@ pub fn load_randomindex_lookup_structure(term: &mut Term, wallet: &Wallet) -> lo
         },
         Ok(wallet) => { wallet }
     };
-    lookup::randomindex::RandomIndexLookup::from(wallet)
+    lookup::randomindex::RandomIndexLookup::from_wallet(wallet, network_magic)
 }
 
 pub fn lock_wallet_log(wallet: &Wallet) -> log::LogLock {
@@ -321,7 +321,7 @@ pub fn wallet_sign_tx(term: &mut Term, wallet: &Wallet, protocol_magic: Protocol
 {
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let wallet = load_bip44_lookup_structure(term, wallet);
+            let wallet = load_bip44_lookup_structure(term, protocol_magic.into(), wallet);
             if let lookup::Address::Bip44(addressing) = address {
                 let xprv = wallet.get_private_key(addressing);
                 TxInWitness::new(protocol_magic, &*xprv, txid)
@@ -330,7 +330,7 @@ pub fn wallet_sign_tx(term: &mut Term, wallet: &Wallet, protocol_magic: Protocol
             }
         },
         HDWalletModel::RandomIndex2Levels => {
-            let wallet = load_randomindex_lookup_structure(term, wallet);
+            let wallet = load_randomindex_lookup_structure(term, protocol_magic.into(), wallet);
             if let lookup::Address::RIndex(addressing) = address {
                 let xprv = wallet.get_private_key(addressing);
                 TxInWitness::new(protocol_magic, &xprv, txid)

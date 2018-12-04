@@ -143,7 +143,7 @@ where
         match wallet::rindex::RootKey::from_daedalus_mnemonics(
             derivation_scheme,
             &language,
-            string.to_string(),
+            &string,
         ) {
             Ok(root_key) => (*root_key).clone(),
             Err(e) => {
@@ -377,7 +377,7 @@ pub fn sync(term: &mut Term,
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
+            let mut lookup_struct = load_bip44_lookup_structure(term, blockchain.config.protocol_magic.into(), &wallet);
             lookup_struct.prepare_next_account()?;
 
             let mut state = create_wallet_state_from_logs(
@@ -389,7 +389,7 @@ pub fn sync(term: &mut Term,
             update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
         },
         HDWalletModel::RandomIndex2Levels => {
-            let lookup_struct = load_randomindex_lookup_structure(term, &wallet);
+            let lookup_struct = load_randomindex_lookup_structure(term, blockchain.config.protocol_magic.into(), &wallet);
             let mut state = create_wallet_state_from_logs(
                 &wallet,
                 &root_dir,
@@ -407,6 +407,7 @@ pub fn address(
     term: &mut Term,
     root_dir: PathBuf,
     name: WalletName,
+    protocol_magic: Option<u32>,
     account: u32,
     is_internal: bool,
     index: u32,
@@ -414,9 +415,16 @@ pub fn address(
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
+    let protocol_magic = if let Some(protocol_magic) = protocol_magic {
+        cardano::config::ProtocolMagic::from(protocol_magic).into()
+    } else {
+        let blockchain = load_attached_blockchain(&root_dir, &wallet.config)?;
+        blockchain.config.protocol_magic.into()
+    };
+
     let addr = match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let mut lookup_struct = load_bip44_lookup_structure(term, &wallet);
+            let mut lookup_struct = load_bip44_lookup_structure(term, protocol_magic, &wallet);
             let account = ::cardano::bip::bip44::Account::new(account)?;
             let change = if is_internal {
                 account.internal()?
@@ -427,7 +435,7 @@ pub fn address(
             lookup_struct.get_address(&addressing)
         },
         HDWalletModel::RandomIndex2Levels => {
-            let lookup_struct = load_randomindex_lookup_structure(term, &wallet);
+            let lookup_struct = load_randomindex_lookup_structure(term, protocol_magic, &wallet);
             let addressing = ::cardano::wallet::rindex::Addressing::new(account, index);
             lookup_struct.get_address(&addressing)
         }

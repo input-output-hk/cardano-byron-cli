@@ -223,10 +223,7 @@ fn blockchain_argument_remote_endpoint_match<'a>(matches: &ArgMatches<'a>) -> St
     }
 }
 fn blockchain_argument_template_definition<'a, 'b>() -> Arg<'a, 'b> {
-    #[cfg(debug_assertions)]
     const AVAILABLE_TEMPLATES : &'static [&'static str] = &[ "mainnet", "staging", "testnet" ];
-    #[cfg(not(debug_assertions))]
-    const AVAILABLE_TEMPLATES : &'static [&'static str] = &[ "mainnet", "staging" ];
 
     Arg::with_name("BLOCKCHAIN_TEMPLATE")
         .long("template")
@@ -768,12 +765,16 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let name = wallet_argument_name_match(&matches);
             let account = value_t!(matches, "ACCOUNT_INDEX", u32).unwrap_or_else(|e| e.exit());
             let index   = value_t!(matches, "ADDRESS_INDEX", u32).unwrap_or_else(|e| e.exit());
+            let protocol_magic = if matches.is_present("PROTOCOL_MAGIC") {
+                Some(value_t!(matches, "PROTOCOL_MAGIC", u32).unwrap_or_else(|e| e.exit()))
+            } else { None };
             let is_internal = matches.is_present("INTERNAL_ADDRESS");
 
             wallet::commands::address(
                 &mut term,
                 root_dir,
                 name,
+                protocol_magic,
                 account,
                 is_internal,
                 index
@@ -872,6 +873,7 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("address")
             .about("create a new address")
             .arg(wallet_argument_name_definition())
+            .arg(Arg::with_name("PROTOCOL_MAGIC").long("protocol-magic").help("Optional parameter, only required if the wallet is not attached."))
             .arg(Arg::with_name("ACCOUNT_INDEX").required(true))
             .arg(Arg::with_name("ADDRESS_INDEX").required(true))
             .arg(Arg::with_name("INTERNAL_ADDRESS").long("internal"))
