@@ -61,13 +61,14 @@ impl<'a> ConnectedPeer<'a> {
             // do nothing, best_tip is behind the remote tip.
         } else if best_tip.0.date > tip.date {
             match storage::block_read(&peer.blockchain.storage, &tip.hash) {
-                None => {
+                Err(storage::Error::BlockNotFound(_)) => {
                     // we don't have the block locally... might be a fork, we need to download the
                     // blockchain anyway
                     term.info("remote may have forked from the consensus. Download the blocks anyway.").unwrap();
                     best_tip = our_tip;
                 },
-                Some(_) => {
+                Err(err) => panic!(err),
+                Ok(_) => {
                     term.info("remote already as further as it takes").unwrap();
                     peer.save_peer_local_tip(&tip.hash);
                     return peer;

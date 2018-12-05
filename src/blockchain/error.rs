@@ -1,4 +1,3 @@
-use super::iter;
 use std::{io, fmt, error, path::PathBuf};
 use cardano::block::{self, BlockDate, HeaderHash};
 use cardano_storage;
@@ -8,7 +7,6 @@ use cbor_event;
 pub enum Error {
     IoError(io::Error),
     StorageError(cardano_storage::Error),
-    IterError(iter::Error),
 
     NewCannotInitializeBlockchainDirectory(cardano_storage::Error),
 
@@ -39,10 +37,6 @@ impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self { Error::IoError(e) }
 }
 
-impl From<iter::Error> for Error {
-    fn from(e: iter::Error) -> Self { Error::IterError(e) }
-}
-
 impl From<cardano_storage::Error> for Error {
     fn from(e: cardano_storage::Error) -> Self { Error::StorageError(e) }
 }
@@ -54,7 +48,6 @@ impl fmt::Display for Error {
         match self {
             Error::IoError(_) => write!(f, "I/O Error"),
             Error::StorageError(_) => write!(f, "Storage Error"),
-            Error::IterError(_) => write!(f, "Error iterating blockchain"),
 
             Error::NewCannotInitializeBlockchainDirectory(_) => write!(f, "Cannot Initialise the blockchain directory"),
             Error::LoadConfigFileNotFound(p)                 => write!(f, "Cannot load blockchain configuration from `{}`; is the blockchain initialized?", p.to_string_lossy()),
@@ -81,7 +74,6 @@ impl error::Error for Error {
         match self {
             Error::IoError(ref err) => Some(err),
             Error::StorageError(ref err) => Some(err),
-            Error::IterError(ref err) => Some(err),
             Error::NewCannotInitializeBlockchainDirectory(ref err) => Some(err),
             Error::ListBlockchainInvalidName(ref err) => Some(err),
             Error::CatMalformedBlock(ref err) => Some(err),
