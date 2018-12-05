@@ -1,6 +1,7 @@
 use cardano::wallet::{bip44};
 use std::collections::BTreeMap;
 use cardano::{address::{ExtendedAddr, Addr}, hdwallet::XPrv};
+use cardano::config::NetworkMagic;
 
 use super::{Address, AddressLookup, AddressLookupError};
 use super::super::{utxo::{UTxO}};
@@ -26,17 +27,20 @@ pub struct SequentialBip44Lookup {
     // accounts threshold index for internal and external addresses
     accounts: Vec<[bip44::Index;2]>,
 
+    network_magic: NetworkMagic,
+
     // gap limit
     gap_limit: u32,
 }
 
 impl SequentialBip44Lookup {
-    pub fn new(wallet: bip44::Wallet) -> Self {
+    pub fn new(wallet: bip44::Wallet, network_magic: NetworkMagic) -> Self {
         SequentialBip44Lookup {
             wallet: wallet,
             expected: BTreeMap::new(),
             accounts: Vec::new(),
             gap_limit: DEFAULT_GAP_LIMIT,
+            network_magic: network_magic,
         }
     }
 
@@ -49,7 +53,7 @@ impl SequentialBip44Lookup {
     pub fn get_address(&self, addr: &bip44::Addressing) -> ExtendedAddr {
         let xprv = self.get_private_key(addr);
         let xpub = xprv.public();
-        ExtendedAddr::new_simple(*xpub)
+        ExtendedAddr::new_simple(*xpub, self.network_magic)
     }
 
 

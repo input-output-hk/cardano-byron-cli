@@ -64,10 +64,11 @@ impl Blockchain {
         let dir = config::directory(root_dir, &name);
         let storage_config = StorageConfig::new(&dir);
 
-
+        debug!("init storage");
         let storage = Storage::init(&storage_config)
             .map_err(Error::NewCannotInitializeBlockchainDirectory)?;
         let file = storage_config.get_config_file();
+        debug!("creating config file");
         config.to_file(file);
 
         // by default, the config file comes with pre-set remote peers,
@@ -76,6 +77,7 @@ impl Blockchain {
             let tag = format!("remote/{}", peer.name());
             tag::write_hash(&storage, &tag, &config.genesis)
         }
+        debug!("wrote initial hashes");
 
         let blockchain = Blockchain {
             name,
@@ -85,8 +87,11 @@ impl Blockchain {
             config,
         };
 
+        debug!("saving initial Tip");
         blockchain.save_tip(&blockchain.config.genesis);
+        debug!("initializing genesis data");
         blockchain.init_genesis_data()?;
+        debug!("done...");
 
         Ok(blockchain)
     }
@@ -96,8 +101,9 @@ impl Blockchain {
         let genesis_data = genesis_data::get_genesis_data(&self.config.genesis_prev)
             .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
-        let dir = config::directory(&self.dir, &self.name);
-        let path = dir.join("genesis.json");
+        let path = self.dir.join("genesis.json");
+
+        debug!("writing genesis file: {:?}", path);
         let mut fs = OpenOptions::new()
                     .read(true).write(true).create(true)
                     .open(path)?;
@@ -108,8 +114,7 @@ impl Blockchain {
 
     pub fn load_genesis_data(&self) -> Result<cardano::config::GenesisData> {
         use std::{fs::OpenOptions};
-        let dir = config::directory(&self.dir, &self.name);
-        let path = dir.join("genesis.json");
+        let path = self.dir.join("genesis.json");
         let fs = OpenOptions::new()
             .read(true)
             .open(path)?;
