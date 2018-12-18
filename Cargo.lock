@@ -120,7 +120,7 @@ dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cryptoxide 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dialoguer 0.3.0 (git+https://github.com/primetype/dialoguer?rev=2f5b8b96cc1388834915f65fca59b7c14fde0835)",
+ "dialoguer 0.3.0 (git+https://github.com/mitsuhiko/dialoguer?rev=cd94ac23c995c31c16b05512d30725cdb00bedf3)",
  "dirs 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "exe-common 0.1.0",
@@ -285,7 +285,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "dialoguer"
 version = "0.3.0"
-source = "git+https://github.com/primetype/dialoguer?rev=2f5b8b96cc1388834915f65fca59b7c14fde0835#2f5b8b96cc1388834915f65fca59b7c14fde0835"
+source = "git+https://github.com/mitsuhiko/dialoguer?rev=cd94ac23c995c31c16b05512d30725cdb00bedf3#cd94ac23c995c31c16b05512d30725cdb00bedf3"
 dependencies = [
  "console 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1370,7 +1370,7 @@ dependencies = [
 "checksum crossbeam-utils 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "677d453a17e8bd2b913fa38e8b9cf04bcdbb5be790aa294f2389661d72036015"
 "checksum crossbeam-utils 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c55913cc2799171a550e307918c0a360e8c16004820291bf3b638969b4a01816"
 "checksum cryptoxide 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bc9be687df90da186ed5c6ada0b6b4d69f5ad914071870bc5d41277377d30427"
-"checksum dialoguer 0.3.0 (git+https://github.com/primetype/dialoguer?rev=2f5b8b96cc1388834915f65fca59b7c14fde0835)" = "<none>"
+"checksum dialoguer 0.3.0 (git+https://github.com/mitsuhiko/dialoguer?rev=cd94ac23c995c31c16b05512d30725cdb00bedf3)" = "<none>"
 "checksum dirs 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "88972de891f6118092b643d85a0b28e0678e0f948d7f879aa32f2d5aafe97d2a"
 "checksum dtoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "6d301140eb411af13d3115f9a562c85cc6b541ade9dfa314132244aaee7489dd"
 "checksum env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)" = "15b0a4d2e39f8420210be8b27eeda28029729e2fd4291019455016c348240c38"
