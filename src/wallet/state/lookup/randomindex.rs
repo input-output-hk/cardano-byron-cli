@@ -49,6 +49,14 @@ impl AddressLookup for RandomIndexLookup {
         &mut self,
         utxo: UTxO<ExtendedAddr>,
     ) -> Result<Option<UTxO<Address>>, AddressLookupError> {
+        match &utxo.credited_address.attributes.derivation_path {
+            None => (),
+            Some(ref payload) => {
+                if payload.len() > 90 { return Ok(None) }
+            }
+        }
+
+
         let opt_addressing = self.generator.try_get_addressing(&utxo.credited_address)?;
 
         match opt_addressing {
