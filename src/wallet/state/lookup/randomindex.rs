@@ -52,6 +52,7 @@ impl AddressLookup for RandomIndexLookup {
         match &utxo.credited_address.attributes.derivation_path {
             None => (),
             Some(ref payload) => {
+                if payload.len() < 20 { return Ok(None) }
                 if payload.len() > 90 { return Ok(None) }
             }
         }
