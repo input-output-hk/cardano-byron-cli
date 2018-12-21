@@ -45,6 +45,8 @@ pub fn update_wallet_state_with_utxos<LS>( term: &mut Term
         debug!("transactions in: {}", ptr);
 
         if let Some(addr) = ptr.latest_addr {
+            // Ignore the latest known block hash so next call to sync won't fail.
+            if addr == from_date { continue; }
             if last_block_date.get_epochid() != addr.get_epochid() {
 
                 let log_lock = lock_wallet_log(&wallet);
