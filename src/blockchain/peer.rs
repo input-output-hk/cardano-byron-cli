@@ -290,7 +290,10 @@ impl<'a> Peer<'a> {
         }, true);
         let our_tip = match self.blockchain.storage.get_block_from_tag(&self.tag) {
             Err(storage::Error::NoSuchTag) => boundary_ref,
-            Err(err) => panic!(err),
+            Err(storage::Error::BlockNotFound(hash))
+                if &hash == self.blockchain.config.genesis.as_hash_bytes()
+                => boundary_ref,
+            Err(err) => panic!("unable to fetch tag '{}': {}", self.tag, err),
             Ok(block) => {
                 let header = block.get_header();
                 let hash = header.compute_hash();
