@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "cardano-cli"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cardano 0.1.0",
