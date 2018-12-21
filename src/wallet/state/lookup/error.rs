@@ -22,4 +22,11 @@ impl Display for AddressLookupError {
     }
 }
 
-impl Error for AddressLookupError {}
+impl Error for AddressLookupError {
+    fn cause(&self) -> Option<&dyn Error> {
+        match self {
+            AddressLookupError::RandomIndex(err) => err.cause(),
+            AddressLookupError::SequentialBip44(err) => err.cause(),
+        }
+    }
+}
