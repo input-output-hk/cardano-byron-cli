@@ -60,7 +60,7 @@ impl<'a> ConnectedPeer<'a> {
         if best_tip.0.date < tip.date {
             // do nothing, best_tip is behind the remote tip.
         } else if best_tip.0.date > tip.date {
-            match storage::block_read(&peer.blockchain.storage, &tip.hash) {
+            match peer.blockchain.storage.read_block(tip.hash.as_hash_bytes()) {
                 Err(storage::Error::BlockNotFound(_)) => {
                     // we don't have the block locally... might be a fork, we need to download the
                     // blockchain anyway
@@ -144,7 +144,7 @@ impl<'a> ConnectedPeer<'a> {
             // Iterate to the last block in the previous epoch.
             let mut cur_hash = best_tip.0.hash.clone();
             loop {
-                let block_raw = storage::block_read(&peer.blockchain.storage, &cur_hash).unwrap();
+                let block_raw = peer.blockchain.storage.read_block(cur_hash.as_hash_bytes()).unwrap();
                 let block = block_raw.decode().unwrap();
                 let hdr = block.get_header();
                 assert!(hdr.get_blockdate().get_epochid() == first_unstable_epoch);
@@ -307,7 +307,7 @@ impl<'a> Peer<'a> {
 }
 
 mod internal {
-    use cardano_storage::{self as storage, block_read};
+    use cardano_storage::{self as storage};
     use storage_units::packfile;
     use cardano::block::{EpochId, HeaderHash};
     use cardano::util::{hex};
@@ -354,7 +354,7 @@ mod internal {
         let mut cur_hash = last_block.clone();
         let mut blocks = vec![];
         loop {
-            let block_raw = block_read(&storage, &cur_hash).unwrap();
+            let block_raw = storage.read_block(cur_hash.as_hash_bytes()).unwrap();
             let block = block_raw.decode().unwrap();
             let hdr = block.get_header();
             assert!(hdr.get_blockdate().get_epochid() == epoch_id);

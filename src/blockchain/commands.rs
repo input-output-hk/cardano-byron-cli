@@ -235,7 +235,7 @@ pub fn log( term: &mut Term
     let blockchain = Blockchain::load(root_dir, name)?;
 
     let from = if let Some(hash) = from {
-        storage::block_location(&blockchain.storage, &hash)?;
+        blockchain.storage.block_location(hash.as_hash_bytes())?;
         hash
     } else {
         blockchain.load_tip().0.hash
@@ -260,7 +260,7 @@ pub fn forward( term: &mut Term
     let blockchain = Blockchain::load(root_dir, name)?;
 
     let hash = if let Some(hash) = to {
-        storage::block_location(&blockchain.storage, &hash)?;
+        blockchain.storage.block_location(hash.as_hash_bytes())?;
         hash
     } else {
         let initial_tip = blockchain.load_tip().0;
@@ -324,7 +324,7 @@ pub fn cat( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone())?;
-    let rblk = cardano_storage::block_read(&blockchain.storage, &hash)?;
+    let rblk = blockchain.storage.read_block(hash.as_hash_bytes())?;
 
     if no_parse {
         ::std::io::stdout().write(rblk.as_ref())?;
@@ -404,10 +404,10 @@ pub fn verify_block( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name)?;
-    let rblk = cardano_storage::block_read(&blockchain.storage, &hash)?;
+    let rblk = blockchain.storage.read_block(hash.as_hash_bytes())?;
     match rblk.decode() {
         Ok(blk) => {
-            match cardano::block::verify_block(blockchain.config.protocol_magic, &hash, &blk) {
+            match cardano::block::verify_block(&hash, &blk) {
                 Ok(()) => {
                     Ok(writeln!(term, "{}", style!("Block is valid").green())?)
                 }
@@ -506,13 +506,13 @@ pub fn query(
                 &date
             )?;
             match resolved {
-                Some(hash) => hash,
+                Some(hash) => hash.into(),
                 None => {
                     return Err(Error::QueryBlockDateNotResolved(date));
                 }
             }
         }
-        None => (*blockchain.config.genesis).clone(),
+        None => blockchain.config.genesis.clone(),
     };
     let to = match params.end {
         Some(date) => {
@@ -522,13 +522,13 @@ pub fn query(
                 &date
             )?;
             match resolved {
-                Some(hash) => hash,
+                Some(hash) => HeaderHash::from(hash),
                 None => {
                     return Err(Error::QueryBlockDateNotResolved(date));
                 }
             }
         }
-        None => (*tip).clone(),
+        None => tip.clone(),
     };
     for res in storage::iter::Iter::new(&blockchain.storage, from, to)? {
         let (_raw_blk, block) = res?;
