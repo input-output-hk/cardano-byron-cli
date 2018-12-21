@@ -1,7 +1,6 @@
 pub mod config;
 pub mod commands;
 pub mod peer;
-pub mod iter;
 pub mod error;
 
 pub use self::error::{Error, Result};
@@ -230,11 +229,11 @@ impl Blockchain {
         tag::write_hash(&self.storage, &LOCAL_BLOCKCHAIN_TIP_TAG, hh);
     }
 
-    pub fn iter<'a>(&'a self, from: block::HeaderHash, to: block::HeaderHash) -> iter::Result<iter::Iter<'a>> {
-        iter::Iter::new(&self.storage, from, to)
+    pub fn iter<'a>(&'a self, from: block::HeaderHash, to: block::HeaderHash) -> storage::Result<storage::iter::Iter<'a>> {
+        storage::iter::Iter::new(&self.storage, from, to)
     }
 
-    pub fn iter_to_tip<'a>(&'a self, from: block::HeaderHash) -> iter::Result<iter::Iter<'a>> {
+    pub fn iter_to_tip<'a>(&'a self, from: block::HeaderHash) -> storage::Result<storage::iter::Iter<'a>> {
         let to   = self.load_tip().0.hash;
 
         self.iter(from, to)
