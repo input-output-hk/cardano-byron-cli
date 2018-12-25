@@ -1,10 +1,21 @@
-use storage_units::{append, utils::{serialize, lock::{self, Lock}}};
-use cardano::{util::{hex}, address::{ExtendedAddr}, tx::{TxInWitness, TxoPointer}, config::{ProtocolMagic}};
-use std::{path::PathBuf, error, fmt};
+use cardano::{
+    address::ExtendedAddr,
+    config::ProtocolMagic,
+    tx::{TxInWitness, TxoPointer},
+    util::hex,
+};
+use std::{error, fmt, path::PathBuf};
+use storage_units::{
+    append,
+    utils::{
+        lock::{self, Lock},
+        serialize,
+    },
+};
 
-use super::{config, StagingId, Operation, Transaction, Input, Output, Change};
-use super::operation::{ParsingOperationError};
-use super::{transaction};
+use super::operation::ParsingOperationError;
+use super::transaction;
+use super::{config, Change, Input, Operation, Output, StagingId, Transaction};
 
 pub struct StagingTransaction {
     /// the unique Staging ID associated to this staging
@@ -23,13 +34,17 @@ pub struct StagingTransaction {
     /// keep a lock to the staging transaction file for as long as this object
     /// exist. This will prevent having code that opens the same staging
     /// transaction multiple time.
-    pub writer: append::Writer
+    pub writer: append::Writer,
 }
 
-const MAGIC_TRANSACTION_V1 : &'static [u8] = b"TRANSACTION_V1";
+const MAGIC_TRANSACTION_V1: &'static [u8] = b"TRANSACTION_V1";
 
 impl StagingTransaction {
-    fn new_with(root_dir: PathBuf, protocol_magic: ProtocolMagic, id: StagingId) -> append::Result<Self> {
+    fn new_with(
+        root_dir: PathBuf,
+        protocol_magic: ProtocolMagic,
+        id: StagingId,
+    ) -> append::Result<Self> {
         let path = config::transaction_file(root_dir, id);
 
         if path.is_file() {
@@ -50,7 +65,7 @@ impl StagingTransaction {
             protocol_magic: protocol_magic,
             operations: Vec::new(),
             transaction: Transaction::new(),
-            writer: w
+            writer: w,
         })
     }
 
@@ -77,7 +92,9 @@ impl StagingTransaction {
     ///
     /// Note: the Export does not include the operation history. Only the
     /// necessary details.
-    pub fn export(&self) -> Export { Export::from(self) }
+    pub fn export(&self) -> Export {
+        Export::from(self)
+    }
 
     /// reconstruct a staging transaction from an `Export`.
     ///
@@ -91,24 +108,34 @@ impl StagingTransaction {
         for output in export.transaction.outputs {
             st.add_output(output)?;
         }
-        if export.transaction.finalized { st.finalize()?; }
+        if export.transaction.finalized {
+            st.finalize()?;
+        }
 
         Ok(st)
     }
 
     /// get the identifier associated to the given `StagingTransaction`
-    pub fn id(&self) -> &StagingId { &self.id }
+    pub fn id(&self) -> &StagingId {
+        &self.id
+    }
 
     /// get a reference to the operations. It is not posible to have
     /// a mutable reference as we need to update other components
     /// at the same time (like the `StagingTransaction`'s file).
-    pub fn operations(&self) -> &[Operation] { &self.operations }
+    pub fn operations(&self) -> &[Operation] {
+        &self.operations
+    }
 
     /// get the transaction
-    pub fn transaction(&self) -> &Transaction { &self.transaction }
+    pub fn transaction(&self) -> &Transaction {
+        &self.transaction
+    }
 
     /// tell of the transaction is finalized and needs to be signed now
-    pub fn is_finalized(&self) -> bool { self.transaction.is_finalized() }
+    pub fn is_finalized(&self) -> bool {
+        self.transaction.is_finalized()
+    }
 
     /// retrieve a `StagingTransaction` from the given staging id. It will
     /// try to lock the staging file, to parse it and apply every operations
@@ -120,7 +147,10 @@ impl StagingTransaction {
     ///    thread/process (or the same process);
     /// 2. the data is unsupported or corrupted;
     ///
-    pub fn read_from_file(root_dir: PathBuf, id: StagingId) -> Result<Self, StagingTransactionParseError> {
+    pub fn read_from_file(
+        root_dir: PathBuf,
+        id: StagingId,
+    ) -> Result<Self, StagingTransactionParseError> {
         let path = config::transaction_file(root_dir, id);
         let lock = Lock::lock(path)?;
         let mut reader = append::Reader::open(lock)?;
@@ -128,20 +158,18 @@ impl StagingTransaction {
         // check the staging transaction magic
         let magic_got = reader.next()?;
         match magic_got {
-            None => { return Err(StagingTransactionParseError::NoMagic) },
+            None => return Err(StagingTransactionParseError::NoMagic),
             Some(magic_got) => {
                 if magic_got != MAGIC_TRANSACTION_V1 {
                     return Err(StagingTransactionParseError::InvalidMagic(magic_got));
                 }
-            },
+            }
         }
         let protocol_magic = reader.next()?;
         let protocol_magic = match protocol_magic {
-            None => { return Err(StagingTransactionParseError::MissingProtocolMagic) },
+            None => return Err(StagingTransactionParseError::MissingProtocolMagic),
             Some(protocol_magic) => {
-                ProtocolMagic::from(
-                    serialize::utils::read_u32(&mut protocol_magic.as_slice())?
-                )
+                ProtocolMagic::from(serialize::utils::read_u32(&mut protocol_magic.as_slice())?)
             }
         };
 
@@ -157,11 +185,11 @@ impl StagingTransaction {
         let w = append::Writer::open(reader.close())?;
 
         Ok(StagingTransaction {
-            id : id,
+            id: id,
             protocol_magic: protocol_magic,
-            operations : operations,
+            operations: operations,
             transaction: transaction,
-            writer: w
+            writer: w,
         })
     }
 
@@ -240,13 +268,15 @@ impl StagingTransaction {
         self.append(Operation::RemoveOutput(index))
     }
 
-
     /// remove every output associated to the given address
     pub fn remove_outputs_for(&mut self, address: &ExtendedAddr) -> Result<(), StagingUpdateError> {
         let mut index = 0;
 
         while index != self.transaction.outputs().len() {
-            assert!(index < u32::max_value() as usize, "There is clearly too many outputs in this staging transaction");
+            assert!(
+                index < u32::max_value() as usize,
+                "There is clearly too many outputs in this staging transaction"
+            );
             if &self.transaction.outputs()[index].address == address {
                 self.remove_output(index as u32)?;
             } else {
@@ -276,19 +306,19 @@ impl From<transaction::Error> for StagingUpdateError {
 impl fmt::Display for StagingUpdateError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StagingUpdateError::AppendFile(_)                => {
+            StagingUpdateError::AppendFile(_) => {
                 write!(f, "Staging transaction corrupted or unsupported format")
-            },
+            }
             StagingUpdateError::TransactionIsInvalidState(_) => {
                 write!(f, "Invalid operation on transaction")
-            },
+            }
         }
     }
 }
 impl error::Error for StagingUpdateError {
-    fn cause(&self) -> Option<& error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match self {
-            StagingUpdateError::AppendFile(ref err)                => Some(err),
+            StagingUpdateError::AppendFile(ref err) => Some(err),
             StagingUpdateError::TransactionIsInvalidState(ref err) => Some(err),
         }
     }
@@ -346,35 +376,34 @@ impl From<transaction::Error> for StagingTransactionParseError {
 impl fmt::Display for StagingTransactionParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StagingTransactionParseError::AppendFile(_)                => {
+            StagingTransactionParseError::AppendFile(_) => {
                 write!(f, "Staging transaction corrupted or unsupported format")
-            },
-            StagingTransactionParseError::NoMagic                      => {
+            }
+            StagingTransactionParseError::NoMagic => {
                 write!(f, "Staging file is missing its MagicNumber")
-            },
-            StagingTransactionParseError::MissingProtocolMagic         => {
+            }
+            StagingTransactionParseError::MissingProtocolMagic => {
                 write!(f, "Staging file is missing the protocol magic")
-            },
-            StagingTransactionParseError::InvalidMagic(_)              => {
-                write!(f, "Invalid magic")
-            },
-            StagingTransactionParseError::Operation(_)                 => {
-                write!(f, "Error in the sequence of operation in the staging transation file")
-            },
+            }
+            StagingTransactionParseError::InvalidMagic(_) => write!(f, "Invalid magic"),
+            StagingTransactionParseError::Operation(_) => write!(
+                f,
+                "Error in the sequence of operation in the staging transation file"
+            ),
             StagingTransactionParseError::TransactionIsInvalidState(_) => {
                 write!(f, "The staging transaction is in an invalid state")
-            },
+            }
         }
     }
 }
 impl error::Error for StagingTransactionParseError {
-    fn cause(&self) -> Option<& error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match self {
-            StagingTransactionParseError::AppendFile(ref err)                => Some(err),
-            StagingTransactionParseError::NoMagic                            => None,
-            StagingTransactionParseError::MissingProtocolMagic               => None,
-            StagingTransactionParseError::InvalidMagic(_)                    => None,
-            StagingTransactionParseError::Operation(ref err)                 => Some(err),
+            StagingTransactionParseError::AppendFile(ref err) => Some(err),
+            StagingTransactionParseError::NoMagic => None,
+            StagingTransactionParseError::MissingProtocolMagic => None,
+            StagingTransactionParseError::InvalidMagic(_) => None,
+            StagingTransactionParseError::Operation(ref err) => Some(err),
             StagingTransactionParseError::TransactionIsInvalidState(ref err) => Some(err),
         }
     }

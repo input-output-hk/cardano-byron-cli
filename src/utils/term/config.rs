@@ -1,7 +1,7 @@
 pub enum ColorChoice {
     Auto,
     Always,
-    Never
+    Never,
 }
 
 /// Configuration for the output options

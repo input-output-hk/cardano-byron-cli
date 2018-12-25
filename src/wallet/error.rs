@@ -32,10 +32,14 @@ pub enum Error {
     WalletsLoadFailed(io::Error),
 }
 impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self { Error::IoError(e) }
+    fn from(e: io::Error) -> Self {
+        Error::IoError(e)
+    }
 }
 impl From<blockchain::Error> for Error {
-    fn from(e: blockchain::Error) -> Self { Error::CannotLoadBlockchain(e) }
+    fn from(e: blockchain::Error) -> Self {
+        Error::CannotLoadBlockchain(e)
+    }
 }
 impl From<blockchain::BlockchainNameError> for Error {
     fn from(e: blockchain::BlockchainNameError) -> Self {
@@ -43,75 +47,105 @@ impl From<blockchain::BlockchainNameError> for Error {
     }
 }
 impl From<coin::Error> for Error {
-    fn from(e: coin::Error) -> Self { Error::CoinError(e) }
+    fn from(e: coin::Error) -> Self {
+        Error::CoinError(e)
+    }
 }
 impl From<lookup::AddressLookupError> for Error {
-    fn from(e: lookup::AddressLookupError) -> Self { Error::AddressLookupError(e) }
+    fn from(e: lookup::AddressLookupError) -> Self {
+        Error::AddressLookupError(e)
+    }
 }
 impl From<bip44::Error> for Error {
-    fn from(e: bip44::Error) -> Self { Error::AddressLookupError(e.into()) }
+    fn from(e: bip44::Error) -> Self {
+        Error::AddressLookupError(e.into())
+    }
 }
 impl From<hdwallet::Error> for Error {
-    fn from(e: hdwallet::Error) -> Self { Error::CannotRetrievePrivateKey(e) }
+    fn from(e: hdwallet::Error) -> Self {
+        Error::CannotRetrievePrivateKey(e)
+    }
 }
 impl From<log::Error> for Error {
     fn from(e: log::Error) -> Self {
         match e {
             log::Error::LogNotFound => Error::WalletLogNotFound,
-            log::Error::LockError(lock::Error::AlreadyLocked(_, process_id)) => Error::WalletLogAlreadyLocked(process_id),
-            e => Error::WalletLogError(e)
+            log::Error::LockError(lock::Error::AlreadyLocked(_, process_id)) => {
+                Error::WalletLogAlreadyLocked(process_id)
+            }
+            e => Error::WalletLogError(e),
         }
     }
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::IoError(_)                              => write!(f, "I/O error occurred"),
-            Error::CannotLoadBlockchain(_)                 => write!(f, "Cannot load blockchain"),
-            Error::BlockchainNameError(_)                  => write!(f, "Invalid blockchain name"),
-            Error::CoinError(_)                            => write!(f, "Error with coin calculations"),
-            Error::AddressLookupError(_)                   => write!(f, "Error with account addressing"),
-            Error::CannotRetrievePrivateKey(_)             => write!(f, "Unsupported private key serialisation"),
-            Error::CannotRetrievePrivateKeyInvalidPassword => write!(f, "Invalid spending password"),
-            Error::CannotRecoverFromDaedalusMnemonics(_)   => write!(f, "Cannot recover the wallet from Daedalus mnemonics"),
-            Error::ConfigReadFailed(ref path, _)           => write!(f, "Failed to read wallet configuration file `{}`", path.to_string_lossy()),
-            Error::ConfigWriteFailed(ref path, _)          => write!(f, "Failed to write wallet configuration to directory `{}`", path.to_string_lossy()),
-            Error::WalletLoadFailed(_)                     => write!(f, "Cannot load the wallet"),
-            Error::WalletSaveFailed(_)                     => write!(f, "Cannot save the wallet"),
-            Error::WalletDestroyFailed(_)                  => write!(f, "Cannot destroy the wallet"),
-            Error::WalletDeleteLogFailed(_)                => write!(f, "Cannot delete the wallet's log"),
-            Error::WalletLogAlreadyLocked(pid)             => write!(f, "Wallet is already being used by another process (process id: {})", pid),
-            Error::WalletLogNotFound                       => write!(f, "No wallet log Found"),
-            Error::WalletLogError(_)                       => write!(f, "Error with the wallet log"),
-            Error::NotAttachedToBlockchain                 => write!(f, "Wallet is not attached to any blockchain"),
-            Error::AttachAlreadyAttached(bn)               => write!(f, "Wallet already attached to blockchain `{}'", bn),
-            Error::WalletsLoadFailed(_)                    => write!(f, "Cannot load wallets"),
+            Error::IoError(_) => write!(f, "I/O error occurred"),
+            Error::CannotLoadBlockchain(_) => write!(f, "Cannot load blockchain"),
+            Error::BlockchainNameError(_) => write!(f, "Invalid blockchain name"),
+            Error::CoinError(_) => write!(f, "Error with coin calculations"),
+            Error::AddressLookupError(_) => write!(f, "Error with account addressing"),
+            Error::CannotRetrievePrivateKey(_) => {
+                write!(f, "Unsupported private key serialisation")
+            }
+            Error::CannotRetrievePrivateKeyInvalidPassword => {
+                write!(f, "Invalid spending password")
+            }
+            Error::CannotRecoverFromDaedalusMnemonics(_) => {
+                write!(f, "Cannot recover the wallet from Daedalus mnemonics")
+            }
+            Error::ConfigReadFailed(ref path, _) => write!(
+                f,
+                "Failed to read wallet configuration file `{}`",
+                path.to_string_lossy()
+            ),
+            Error::ConfigWriteFailed(ref path, _) => write!(
+                f,
+                "Failed to write wallet configuration to directory `{}`",
+                path.to_string_lossy()
+            ),
+            Error::WalletLoadFailed(_) => write!(f, "Cannot load the wallet"),
+            Error::WalletSaveFailed(_) => write!(f, "Cannot save the wallet"),
+            Error::WalletDestroyFailed(_) => write!(f, "Cannot destroy the wallet"),
+            Error::WalletDeleteLogFailed(_) => write!(f, "Cannot delete the wallet's log"),
+            Error::WalletLogAlreadyLocked(pid) => write!(
+                f,
+                "Wallet is already being used by another process (process id: {})",
+                pid
+            ),
+            Error::WalletLogNotFound => write!(f, "No wallet log Found"),
+            Error::WalletLogError(_) => write!(f, "Error with the wallet log"),
+            Error::NotAttachedToBlockchain => write!(f, "Wallet is not attached to any blockchain"),
+            Error::AttachAlreadyAttached(bn) => {
+                write!(f, "Wallet already attached to blockchain `{}'", bn)
+            }
+            Error::WalletsLoadFailed(_) => write!(f, "Cannot load wallets"),
         }
     }
 }
 impl error::Error for Error {
-    fn cause(&self) -> Option<& error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match self {
-            Error::IoError(ref err)                        => Some(err),
-            Error::CannotLoadBlockchain(ref err)           => Some(err),
-            Error::BlockchainNameError(ref err)            => Some(err),
-            Error::CoinError(ref err)                      => Some(err),
-            Error::AddressLookupError(ref err)             => Some(err),
-            Error::CannotRetrievePrivateKey(ref err)       => Some(err),
+            Error::IoError(ref err) => Some(err),
+            Error::CannotLoadBlockchain(ref err) => Some(err),
+            Error::BlockchainNameError(ref err) => Some(err),
+            Error::CoinError(ref err) => Some(err),
+            Error::AddressLookupError(ref err) => Some(err),
+            Error::CannotRetrievePrivateKey(ref err) => Some(err),
             Error::CannotRetrievePrivateKeyInvalidPassword => None,
             Error::CannotRecoverFromDaedalusMnemonics(ref err) => Some(err),
-            Error::ConfigReadFailed(_, ref err)            => Some(err),
-            Error::ConfigWriteFailed(_, ref err)           => Some(err),
-            Error::WalletLoadFailed(ref err)               => Some(err),
-            Error::WalletSaveFailed(ref err)               => Some(err),
-            Error::WalletDestroyFailed(ref err)            => Some(err),
-            Error::WalletDeleteLogFailed(ref err)          => Some(err),
-            Error::WalletLogAlreadyLocked(_)               => None,
-            Error::WalletLogNotFound                       => None,
-            Error::WalletLogError(ref err)                 => Some(err),
-            Error::NotAttachedToBlockchain                 => None,
-            Error::AttachAlreadyAttached(_)                => None,
-            Error::WalletsLoadFailed(ref err)              => Some(err),
+            Error::ConfigReadFailed(_, ref err) => Some(err),
+            Error::ConfigWriteFailed(_, ref err) => Some(err),
+            Error::WalletLoadFailed(ref err) => Some(err),
+            Error::WalletSaveFailed(ref err) => Some(err),
+            Error::WalletDestroyFailed(ref err) => Some(err),
+            Error::WalletDeleteLogFailed(ref err) => Some(err),
+            Error::WalletLogAlreadyLocked(_) => None,
+            Error::WalletLogNotFound => None,
+            Error::WalletLogError(ref err) => Some(err),
+            Error::NotAttachedToBlockchain => None,
+            Error::AttachAlreadyAttached(_) => None,
+            Error::WalletsLoadFailed(ref err) => Some(err),
         }
     }
 }

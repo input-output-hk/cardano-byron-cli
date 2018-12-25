@@ -1,10 +1,13 @@
-use cardano::wallet::{bip44};
-use std::collections::BTreeMap;
-use cardano::{address::{ExtendedAddr, Addr}, hdwallet::XPrv};
 use cardano::config::NetworkMagic;
+use cardano::wallet::bip44;
+use cardano::{
+    address::{Addr, ExtendedAddr},
+    hdwallet::XPrv,
+};
+use std::collections::BTreeMap;
 
+use super::super::utxo::UTxO;
 use super::{Address, AddressLookup, AddressLookupError};
-use super::super::{utxo::{UTxO}};
 
 pub const DEFAULT_GAP_LIMIT: u32 = 20;
 
@@ -25,7 +28,7 @@ pub struct SequentialBip44Lookup {
     expected: BTreeMap<Addr, bip44::Addressing>,
 
     // accounts threshold index for internal and external addresses
-    accounts: Vec<[bip44::Index;2]>,
+    accounts: Vec<[bip44::Index; 2]>,
 
     network_magic: NetworkMagic,
 
@@ -45,9 +48,16 @@ impl SequentialBip44Lookup {
     }
 
     pub fn get_private_key(&self, addr: &bip44::Addressing) -> bip44::IndexLevel<XPrv> {
-        self.wallet.account(self.wallet.derivation_scheme(), addr.account.get_scheme_value())
-                   .change(self.wallet.derivation_scheme(), addr.address_type())
-                   .index(self.wallet.derivation_scheme(), addr.index.get_scheme_value())
+        self.wallet
+            .account(
+                self.wallet.derivation_scheme(),
+                addr.account.get_scheme_value(),
+            )
+            .change(self.wallet.derivation_scheme(), addr.address_type())
+            .index(
+                self.wallet.derivation_scheme(),
+                addr.index.get_scheme_value(),
+            )
     }
 
     pub fn get_address(&self, addr: &bip44::Addressing) -> ExtendedAddr {
@@ -56,13 +66,22 @@ impl SequentialBip44Lookup {
         ExtendedAddr::new_simple(*xpub, self.network_magic)
     }
 
-
-    fn mut_generate_from(&mut self, account: &bip44::bip44::Account, change: u32, start: &bip44::Index, nb: u32) -> Result<()> {
+    fn mut_generate_from(
+        &mut self,
+        account: &bip44::bip44::Account,
+        change: u32,
+        start: &bip44::Index,
+        nb: u32,
+    ) -> Result<()> {
         let max = start.incr(nb)?;
         let mut r = *start;
         // generate internal and external addresses
         while r < max {
-            let addressing = bip44::Addressing { account: *account, change: change, index: r };
+            let addressing = bip44::Addressing {
+                account: *account,
+                change: change,
+                index: r,
+            };
             let addr = self.get_address(&addressing);
             self.expected.insert(addr.into(), addressing);
             r = r.incr(1)?;
@@ -113,23 +132,28 @@ impl From<bip44::bip44::Error> for AddressLookupError {
 }
 
 impl AddressLookup for SequentialBip44Lookup {
-    fn lookup(
-        &mut self,
-        utxo: UTxO<ExtendedAddr>
-    ) -> Result<Option<UTxO<Address>>> {
-        let addressing = self.expected.get(&utxo.credited_address.to_address()).cloned();
+    fn lookup(&mut self, utxo: UTxO<ExtendedAddr>) -> Result<Option<UTxO<Address>>> {
+        let addressing = self
+            .expected
+            .get(&utxo.credited_address.to_address())
+            .cloned();
         if let Some(addressing) = addressing {
             self.threshold_generate(addressing)?;
 
             Ok(Some(utxo.map(|_| addressing.into())))
-        } else { Ok(None) }
+        } else {
+            Ok(None)
+        }
     }
 
     fn acknowledge<A: Into<Address>>(&mut self, address: A) -> Result<()> {
         match address.into() {
             Address::Bip44(address) => self.threshold_generate(address),
             addr => {
-                error!("unsupported address (expected bip44 addressing) {:#?}", addr);
+                error!(
+                    "unsupported address (expected bip44 addressing) {:#?}",
+                    addr
+                );
                 Err(bip44::bip44::Error::InvalidType(0).into())
             }
         }

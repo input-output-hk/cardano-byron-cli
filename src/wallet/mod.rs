@@ -1,15 +1,15 @@
-mod config;
 pub mod commands;
+mod config;
 mod error;
 mod result;
 pub mod state;
 pub mod utils;
 
-pub use self::error::{Error};
-pub use self::result::{Result};
-pub use self::config::{HDWalletModel, Config};
+pub use self::config::{Config, HDWalletModel};
+pub use self::error::Error;
+pub use self::result::Result;
 
-use self::config::{decrypt_primary_key};
+use self::config::decrypt_primary_key;
 
 use self::state::log::{LogLock, LogWriter};
 
@@ -20,15 +20,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use cardano::{wallet, hdwallet::{XPub, XPUB_SIZE}};
-use storage_units::utils::{tmpfile::{TmpFile}};
+use cardano::{
+    hdwallet::{XPub, XPUB_SIZE},
+    wallet,
+};
 use serde_yaml;
+use storage_units::utils::tmpfile::TmpFile;
 
-use utils::password_encrypted::{Password};
+use utils::password_encrypted::Password;
 
-static WALLET_CONFIG_FILE : &'static str = "config.yml";
-static WALLET_PRIMARY_KEY : &'static str = "wallet.key";
-static WALLET_PUBLIC_KEY  : &'static str = "wallet.pub";
+static WALLET_CONFIG_FILE: &'static str = "config.yml";
+static WALLET_PRIMARY_KEY: &'static str = "wallet.key";
+static WALLET_PUBLIC_KEY: &'static str = "wallet.pub";
 
 /// User friendly name associated with a Wallet.
 ///
@@ -54,7 +57,7 @@ impl ::std::str::FromStr for WalletName {
     fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         match Self::new(s.to_owned()) {
             Some(wn) => Ok(wn),
-            None => Err("Invalid Wallet Name")
+            None => Err("Invalid Wallet Name"),
         }
     }
 }
@@ -90,24 +93,23 @@ pub struct Wallet {
     // conveniently keep the name given by the user to this wallet.
     pub name: WalletName,
 
-    pub config: Config
+    pub config: Config,
 }
 impl Wallet {
-
     /// create a new wallet, we expect the key to have been properly encrypted
     pub fn new<P: AsRef<Path>>(
         root_dir: P,
         name: WalletName,
         config: Config,
         encrypted_key: Vec<u8>,
-        xpub: Option<XPub>
+        xpub: Option<XPub>,
     ) -> Self {
         Wallet {
             encrypted_key: encrypted_key,
             public_key: xpub,
             root_dir: root_dir.as_ref().to_path_buf(),
             name: name,
-            config: config
+            config: config,
         }
     }
 
@@ -153,26 +155,22 @@ impl Wallet {
     }
 
     pub fn load<P: AsRef<Path>>(root_dir: P, name: WalletName) -> Result<Self> {
-        Self::load_internal(root_dir.as_ref(), name)
-            .map_err(|e| {
-                if let Error::IoError(io_err) = e {
-                    Error::WalletLoadFailed(io_err)
-                } else {
-                    e
-                }
-            })
+        Self::load_internal(root_dir.as_ref(), name).map_err(|e| {
+            if let Error::IoError(io_err) = e {
+                Error::WalletLoadFailed(io_err)
+            } else {
+                e
+            }
+        })
     }
 
-    fn load_internal(
-        root_dir: &Path,
-        name: WalletName,
-    ) -> Result<Self> {
+    fn load_internal(root_dir: &Path, name: WalletName) -> Result<Self> {
         let dir = config::directory(root_dir, &name.as_dirname());
 
         let cfg_path = dir.join(WALLET_CONFIG_FILE);
         let mut file = fs::File::open(&cfg_path)?;
-        let cfg = serde_yaml::from_reader(&mut file)
-            .map_err(|e| Error::ConfigReadFailed(cfg_path, e))?;
+        let cfg =
+            serde_yaml::from_reader(&mut file).map_err(|e| Error::ConfigReadFailed(cfg_path, e))?;
 
         let mut file = fs::File::open(&dir.join(WALLET_PRIMARY_KEY))?;
         let mut key = Vec::with_capacity(150);
@@ -181,7 +179,7 @@ impl Wallet {
         let xpub = match fs::File::open(&dir.join(WALLET_PUBLIC_KEY)) {
             Err(_err) => None, // TODO, check for file does not exists
             Ok(mut file) => {
-                let mut key = [0;XPUB_SIZE];
+                let mut key = [0; XPUB_SIZE];
                 file.read_exact(&mut key)?;
                 Some(XPub::from_bytes(key))
             }
@@ -228,7 +226,7 @@ impl Wallet {
         let xprv = decrypt_primary_key(password, &self.encrypted_key)?;
         Ok(wallet::bip44::Wallet::from_root_key(
             xprv,
-            self.config.derivation_scheme
+            self.config.derivation_scheme,
         ))
     }
 
@@ -246,14 +244,16 @@ impl Wallet {
         let root_key = wallet::rindex::RootKey::new(xprv, self.config.derivation_scheme);
         Ok(wallet::rindex::Wallet::from_root_key(
             self.config.derivation_scheme,
-            root_key
+            root_key,
         ))
     }
 }
 
 pub struct Wallets(BTreeMap<WalletName, Wallet>);
 impl Wallets {
-    pub fn new() -> Self { Wallets(BTreeMap::new())}
+    pub fn new() -> Self {
+        Wallets(BTreeMap::new())
+    }
 
     pub fn load<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
         Self::load_internal(root_dir.as_ref()).map_err(|e| {
@@ -289,15 +289,18 @@ impl Wallets {
                 let wallet = match Wallet::load(root_dir.clone(), name) {
                     Ok(wallet) => wallet,
                     Err(e) => {
-                        warn!("failed to load wallet in directory {:?}: {:?}",
-                            entry.path(), e);
+                        warn!(
+                            "failed to load wallet in directory {:?}: {:?}",
+                            entry.path(),
+                            e
+                        );
                         continue;
                     }
                 };
                 wallets.insert(wallet.name.clone(), wallet);
             } else {
                 warn!("unexpected file in wallet directory: {:?}", entry.path());
-                continue
+                continue;
             }
         }
         Ok(wallets)
@@ -305,13 +308,19 @@ impl Wallets {
 }
 impl ::std::ops::Deref for Wallets {
     type Target = BTreeMap<WalletName, Wallet>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 impl ::std::ops::DerefMut for Wallets {
-    fn deref_mut(& mut self) -> &mut Self::Target { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 impl IntoIterator for Wallets {
-    type Item     = <BTreeMap<WalletName, Wallet> as IntoIterator>::Item;
+    type Item = <BTreeMap<WalletName, Wallet> as IntoIterator>::Item;
     type IntoIter = <BTreeMap<WalletName, Wallet> as IntoIterator>::IntoIter;
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }

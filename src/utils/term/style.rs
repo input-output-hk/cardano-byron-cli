@@ -15,14 +15,14 @@ use cardano::{
     hash, hdwallet, redeem,
 };
 
-pub use console::{StyledObject};
+pub use console::StyledObject;
 
+use super::super::super::blockchain::BlockchainName;
 use super::super::super::transaction;
-use super::super::super::wallet::{WalletName};
-use super::super::super::blockchain::{BlockchainName};
+use super::super::super::wallet::WalletName;
 use utils::time::{Duration, Time};
 
-pub trait Style : Sized {
+pub trait Style: Sized {
     fn style(self) -> StyledObject<Self>;
 }
 
@@ -44,15 +44,12 @@ impl Style for transaction::core::StagingId {
 }
 impl Style for Coin {
     fn style(self) -> StyledObject<Self> {
-        console::style(self)
-            .green().bold()
+        console::style(self).green().bold()
     }
 }
 impl Style for BlockDate {
     fn style(self) -> StyledObject<Self> {
-        console::style(self)
-            .white()
-            .bold()
+        console::style(self).white().bold()
     }
 }
 impl Style for block::boundary::BodyProof {
@@ -72,9 +69,7 @@ impl Style for block::update::UpdateProof {
 }
 impl Style for block::types::EpochSlotId {
     fn style(self) -> StyledObject<Self> {
-        console::style(self)
-            .white()
-            .bold()
+        console::style(self).white().bold()
     }
 }
 impl Style for block::types::ChainDifficulty {
@@ -89,15 +84,12 @@ impl Style for hash::Blake2b256 {
 }
 impl Style for HeaderHash {
     fn style(self) -> StyledObject<Self> {
-        console::style(self)
-            .magenta()
+        console::style(self).magenta()
     }
 }
 impl Style for ExtendedAddr {
     fn style(self) -> StyledObject<Self> {
-        console::style(self)
-            .green()
-            .italic()
+        console::style(self).green().italic()
     }
 }
 impl Style for ProtocolMagic {
@@ -168,7 +160,7 @@ macro_rules! impl_fmt {
                 console::style(self)
             }
         }
-    }
+    };
 }
 impl_fmt!(String);
 impl_fmt!(u8);

@@ -4,7 +4,11 @@ use super::{
     ptr::StatePtr,
     utxo::{UTxO, UTxOs},
 };
-use cardano::{tx::TxoPointer, coin::{self, Coin}, address::ExtendedAddr};
+use cardano::{
+    address::ExtendedAddr,
+    coin::{self, Coin},
+    tx::TxoPointer,
+};
 
 use std::{
     error::Error,
@@ -15,7 +19,7 @@ use std::{
 pub struct State<T: AddressLookup> {
     pub ptr: StatePtr,
     pub lookup_struct: T,
-    pub utxos: UTxOs<Address>
+    pub utxos: UTxOs<Address>,
 }
 
 /// Errors that may be returned by `State::from_log`.
@@ -47,9 +51,7 @@ impl<T> Display for FromLogsError<T> {
         match self {
             NoEntries(_) => write!(f, "No entries in the log"),
             LogReadFailed(_) => write!(f, "Failed to read log"),
-            AddressLookupFailed(_) => {
-                write!(f, "Failed to look up an address found in the log")
-            }
+            AddressLookupFailed(_) => write!(f, "Failed to look up an address found in the log"),
         }
     }
 }
@@ -67,13 +69,14 @@ impl<T: Debug> Error for FromLogsError<T> {
 
 impl<T: AddressLookup> State<T> {
     pub fn new(ptr: StatePtr, lookup_struct: T) -> Self {
-        State { ptr: ptr, lookup_struct: lookup_struct, utxos: UTxOs::new() }
+        State {
+            ptr: ptr,
+            lookup_struct: lookup_struct,
+            utxos: UTxOs::new(),
+        }
     }
 
-    pub fn from_logs<I>(
-        mut lookup_struct: T,
-        iter: I
-    ) -> Result<Self, FromLogsError<T>>
+    pub fn from_logs<I>(mut lookup_struct: T, iter: I) -> Result<Self, FromLogsError<T>>
     where
         I: IntoIterator<Item = Result<Log<Address>, log::Error>>,
     {
@@ -92,18 +95,18 @@ impl<T: AddressLookup> State<T> {
                         error!("This UTxO was already in the UTxOs collection `{}'", utxo);
                         panic!("The Wallet LOG file seems corrupted");
                     };
-                },
+                }
                 Log::SpentFund(known_ptr, utxo) => {
                     match utxos.remove(&utxo.extract_txin()) {
-                        Some(_) => { },
-                        None    => {
+                        Some(_) => {}
+                        None => {
                             error!("UTxO not in the known UTxOs collection `{}'", utxo);
                             panic!("The Wallet LOG file seems corrupted");
                         }
                     };
                     lookup_struct.acknowledge(utxo.credited_addressing.clone())?;
                     ptr = Some(known_ptr);
-                },
+                }
             }
         }
 
@@ -118,15 +121,15 @@ impl<T: AddressLookup> State<T> {
         }
     }
 
-    pub fn ptr<'a>(&'a self) -> &'a StatePtr { &self.ptr }
+    pub fn ptr<'a>(&'a self) -> &'a StatePtr {
+        &self.ptr
+    }
 
     pub fn total(&self) -> coin::Result<Coin> {
         self.utxos
             .iter()
             .map(|(_, v)| v.credited_value)
-            .fold(Ok(Coin::zero()), |acc, v| {
-                acc.and_then(|acc| acc + v)
-            })
+            .fold(Ok(Coin::zero()), |acc, v| acc.and_then(|acc| acc + v))
     }
 
     pub fn forward_with_txins<'a, I>(

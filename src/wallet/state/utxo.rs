@@ -1,5 +1,9 @@
-use cardano::{coin::{Coin}, tx::{TxoPointer, TxId, TxOut}, address::{ExtendedAddr}};
-use std::{fmt, collections::{BTreeMap}};
+use cardano::{
+    address::ExtendedAddr,
+    coin::Coin,
+    tx::{TxId, TxOut, TxoPointer},
+};
+use std::{collections::BTreeMap, fmt};
 
 /// Unspent Transaction Output (aka. UTxO). This is a transaction
 /// that may be spent, that is, as far as known of the state of the
@@ -42,19 +46,20 @@ impl<A> UTxO<A> {
     pub fn extract_txin(&self) -> TxoPointer {
         TxoPointer {
             id: self.transaction_id,
-            index: self.index_in_transaction
+            index: self.index_in_transaction,
         }
     }
 
     pub fn map<B, F>(self, f: F) -> UTxO<B>
-        where F: FnOnce(A) -> B
+    where
+        F: FnOnce(A) -> B,
     {
         UTxO {
             transaction_id: self.transaction_id,
             index_in_transaction: self.index_in_transaction,
             credited_value: self.credited_value,
             credited_addressing: f(self.credited_addressing),
-            credited_address: self.credited_address
+            credited_address: self.credited_address,
         }
     }
 
@@ -63,20 +68,21 @@ impl<A> UTxO<A> {
     pub fn extract_txout(&self) -> TxOut {
         TxOut {
             address: self.credited_address.clone(),
-            value:   self.credited_value,
+            value: self.credited_value,
         }
     }
 }
 impl<A: fmt::Display> fmt::Display for UTxO<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!( f
-              , "{} ({}) received {}Ada in transaction id `{}.{}'"
-              , self.credited_address
-              , self.credited_addressing
-              , self.credited_value
-              , self.transaction_id
-              , self.index_in_transaction
-              )
+        write!(
+            f,
+            "{} ({}) received {}Ada in transaction id `{}.{}'",
+            self.credited_address,
+            self.credited_addressing,
+            self.credited_value,
+            self.transaction_id,
+            self.index_in_transaction
+        )
     }
 }
 
