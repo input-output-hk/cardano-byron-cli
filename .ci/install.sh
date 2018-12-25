@@ -28,6 +28,9 @@ main() {
         x86_64-apple-ios)
             rustup target install x86_64-apple-ios
             ;;
+        rustfmt-preview)
+            rustup component add rustfmt-preview
+            ;;
     esac
 
     # This fetches latest stable release
