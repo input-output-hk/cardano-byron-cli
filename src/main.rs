@@ -1251,6 +1251,10 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
             let xpub_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
             debug::xprv_to_xpub(xprv_in, xpub_out);
         },
+        ("block-cat", Some(block_cat_matches)) => {
+            let decode_type = value_t_or_exit!(block_cat_matches.value_of("INPUT_FORMAT"), blockchain::commands::RawEncodeType);
+            debug::verify_block_cat(decode_type);
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1307,6 +1311,13 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .help("the path to output the associated xpub")
                 .value_name("FILE")
                 .required(true)
+            )
+        )
+        .subcommand(SubCommand::with_name("block-cat")
+            .about("verify proofs and structure within a block")
+            .arg(Arg::with_name("INPUT_FORMAT")
+                .possible_values(&blockchain::commands::RawEncodeType::variants())
+                .case_insensitive(true)
             )
         )
 }

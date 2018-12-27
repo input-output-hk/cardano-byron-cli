@@ -1,5 +1,11 @@
-use cardano::{address::{ExtendedAddr, StakeDistribution}, util::{base58, hex, try_from_slice::{TryFromSlice}}, hash};
-use cardano::hdwallet;
+use cardano::{
+    address::{ExtendedAddr, StakeDistribution},
+    block::verify_block,
+    hash,
+    hdwallet,
+    util::{base58, hex, try_from_slice::{TryFromSlice}}
+};
+use blockchain::{commands::RawEncodeType, Error};
 use utils::term::{emoji, Term, style::Style};
 use std::{io::{self, Read, Write}};
 use exe_common::parse_genesis_data;
@@ -114,4 +120,19 @@ pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
     let mut file = ::std::fs::OpenOptions::new().create(true).write(true).open(output_pub).unwrap();
     file.write_all(s.as_ref()).unwrap();
     ()
+}
+
+pub fn verify_block_cat(decode_type: RawEncodeType) {
+    let mut data = String::new();
+    io::stdin().read_to_string(&mut data).expect("Cannot read stdin.");
+    let bytes = match decode_type {
+        RawEncodeType::Hex    => hex::decode(data.as_ref()).expect("invalid hex string"),
+        RawEncodeType::Base64 => base64::decode(data.as_bytes()).expect("invalid base64 string"),
+    };
+    let rblk = cardano::block::RawBlock::from_dat(bytes);
+    let blk = rblk.decode().map_err(Error::CatMalformedBlock).expect("invalid block format");
+    match verify_block(&blk.get_header().compute_hash(), &blk) {
+        Ok(())   => println!("Block verified as correct!"),
+        Err(err) => println!("Block not valid: {}", err),
+    }
 }
