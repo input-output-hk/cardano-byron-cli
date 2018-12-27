@@ -1,12 +1,12 @@
-use super::super::super::blockchain;
 use cardano::{block::Block, tx::TxAux};
+use cardano_storage as storage;
 
 use indicatif::ProgressBar;
 use super::ptr::StatePtr;
 
 pub struct TransactionIterator<'a>
 {
-    block_iterator: blockchain::iter::Iter<'a>,
+    block_iterator: storage::iter::Iter<'a>,
     progress: ProgressBar,
 
     current_tx: Option<(Block, usize)>,
@@ -31,7 +31,7 @@ impl<'a> TransactionIterator<'a> {
         }
     }
 
-    fn skip_no_transactions(&mut self) -> blockchain::iter::Result<()> {
+    fn skip_no_transactions(&mut self) -> storage::Result<()> {
         self.current_tx = None;
         loop {
             if let Some(res) = self.block_iterator.next() {
@@ -47,7 +47,7 @@ impl<'a> TransactionIterator<'a> {
         }
         Ok(())
     }
-    pub fn new(progress: ProgressBar, block_iterator: blockchain::iter::Iter<'a>) -> Self {
+    pub fn new(progress: ProgressBar, block_iterator: storage::iter::Iter<'a>) -> Self {
         TransactionIterator {
             block_iterator: block_iterator,
             progress: progress,
@@ -56,7 +56,7 @@ impl<'a> TransactionIterator<'a> {
     }
 }
 impl<'a> Iterator for TransactionIterator<'a> {
-    type Item = blockchain::iter::Result<(StatePtr, TxAux)>;
+    type Item = storage::Result<(StatePtr, TxAux)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.mk_tx() {

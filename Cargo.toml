@@ -1,6 +1,6 @@
 [package]
 name = "cardano-cli"
-version = "1.0.0-alpha3"
+version = "1.0.1"
 authors = [ "Nicolas Di Prima <nicolas.diprima@iohk.io>"
           , "Vincent Hanquez <vincent.hanquez@iohk.io>"
           ]
@@ -19,7 +19,7 @@ The Cardano command line interface:
 
 [dependencies]
 console = "0.7"
-dialoguer = { git = "https://github.com/primetype/dialoguer", rev = "2f5b8b96cc1388834915f65fca59b7c14fde0835" }
+dialoguer = { git = "https://github.com/mitsuhiko/dialoguer", rev = "cd94ac23c995c31c16b05512d30725cdb00bedf3" }
 indicatif = "0.9"
 log = "0.4"
 dirs = "1.0"

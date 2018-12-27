@@ -49,7 +49,14 @@ impl AddressLookup for RandomIndexLookup {
         &mut self,
         utxo: UTxO<ExtendedAddr>,
     ) -> Result<Option<UTxO<Address>>, AddressLookupError> {
-        let opt_addressing = self.generator.try_get_addressing(&utxo.credited_address)?;
+        use cardano::wallet::rindex;
+        use cardano::hdpayload;
+        let opt_addressing = match self.generator.try_get_addressing(&utxo.credited_address) {
+            Ok(addressing) => addressing,
+            Err(rindex::Error::PayloadError(hdpayload::Error::PayloadIsTooLarge(_))) => None,
+            Err(rindex::Error::PayloadError(hdpayload::Error::NotEnoughEncryptedData)) => None,
+            Err(err) => return Err(err.into()),
+        };
 
         match opt_addressing {
             None => Ok(None),

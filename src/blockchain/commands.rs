@@ -6,10 +6,10 @@ use cardano_storage as storage;
 
 use utils::{term::{Term, style::Style}, time};
 
-use super::{iter, peer, Blockchain, Result, Error, BlockchainName};
+use super::{peer, Blockchain, Result, Error, BlockchainName};
 use cardano::{
     self,
-    block::{BlockDate, HeaderHash, RawBlock},
+    block::{BlockDate, HeaderHash},
     util::hex,
 };
 
@@ -235,10 +235,7 @@ pub fn log( term: &mut Term
     let blockchain = Blockchain::load(root_dir, name)?;
 
     let from = if let Some(hash) = from {
-        if storage::block_location(&blockchain.storage, &hash).is_none() {
-            return Err(Error::GetInvalidBlock(hash));
-        }
-
+        blockchain.storage.block_location(hash.as_hash_bytes())?;
         hash
     } else {
         blockchain.load_tip().0.hash
@@ -263,10 +260,7 @@ pub fn forward( term: &mut Term
     let blockchain = Blockchain::load(root_dir, name)?;
 
     let hash = if let Some(hash) = to {
-        if storage::block_location(&blockchain.storage, &hash).is_none() {
-            return Err(Error::ForwardHashDoesNotExist(hash))
-        }
-
+        blockchain.storage.block_location(hash.as_hash_bytes())?;
         hash
     } else {
         let initial_tip = blockchain.load_tip().0;
@@ -311,27 +305,6 @@ pub fn pull( term: &mut Term
     forward(term, root_dir, name, None)
 }
 
-fn get_block(blockchain: &Blockchain, hash: &HeaderHash) -> Result<RawBlock>
-{
-    let block_location = match storage::block_location(&blockchain.storage, &hash) {
-        None => {
-            return Err(Error::GetBlockDoesNotExist(hash.clone()));
-        },
-        Some(loc) => loc
-    };
-
-    debug!("blk location: {:?}", block_location);
-
-    match storage::block_read_location(&blockchain.storage, &block_location, &hash) {
-        None        => {
-            // this is a bug, we have a block location available for this hash
-            // but we were not able to read the block.
-            return Err(Error::GetInvalidBlock(hash.clone()));
-        },
-        Some(rblk) => Ok(rblk)
-    }
-}
-
 arg_enum!{
     #[derive(Debug)]
     pub enum RawEncodeType {
@@ -351,7 +324,7 @@ pub fn cat( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir.clone(), name.clone())?;
-    let rblk = get_block(&blockchain, &hash)?;
+    let rblk = blockchain.storage.read_block(hash.as_hash_bytes())?;
 
     if no_parse {
         ::std::io::stdout().write(rblk.as_ref())?;
@@ -431,10 +404,10 @@ pub fn verify_block( term: &mut Term
     -> Result<()>
 {
     let blockchain = Blockchain::load(root_dir, name)?;
-    let rblk = get_block(&blockchain, &hash)?;
+    let rblk = blockchain.storage.read_block(hash.as_hash_bytes())?;
     match rblk.decode() {
         Ok(blk) => {
-            match cardano::block::verify_block(blockchain.config.protocol_magic, &hash, &blk) {
+            match cardano::block::verify_block(&hash, &blk) {
                 Ok(()) => {
                     Ok(writeln!(term, "{}", style!("Block is valid").green())?)
                 }
@@ -477,7 +450,14 @@ pub fn verify_chain( term: &mut Term
         let (_raw_blk, blk) = res.unwrap();
         let hash = blk.get_header().compute_hash();
         match chain_state.verify_block(&hash, &blk) {
-            Ok(()) => {},
+            Ok(()) => {
+                if blk.get_header().get_blockdate().is_boundary() {
+                    storage::chain_state::write_chain_state(
+                        &blockchain.storage,
+                        &genesis_data,
+                        &chain_state)?;
+                }
+            },
             Err(err) => {
                 bad_blocks += 1;
                 writeln!(term, "Block {} ({}) is invalid", hash, blk.get_header().get_blockdate())?;
@@ -526,13 +506,13 @@ pub fn query(
                 &date
             )?;
             match resolved {
-                Some(hash) => hash,
+                Some(hash) => hash.into(),
                 None => {
                     return Err(Error::QueryBlockDateNotResolved(date));
                 }
             }
         }
-        None => (*blockchain.config.genesis).clone(),
+        None => blockchain.config.genesis.clone(),
     };
     let to = match params.end {
         Some(date) => {
@@ -542,15 +522,15 @@ pub fn query(
                 &date
             )?;
             match resolved {
-                Some(hash) => hash,
+                Some(hash) => HeaderHash::from(hash),
                 None => {
                     return Err(Error::QueryBlockDateNotResolved(date));
                 }
             }
         }
-        None => (*tip).clone(),
+        None => tip.clone(),
     };
-    for res in iter::Iter::new(&blockchain.storage, from, to)? {
+    for res in storage::iter::Iter::new(&blockchain.storage, from, to)? {
         let (_raw_blk, block) = res?;
         let hash = block.get_header().compute_hash();
         writeln!(term, "{}", style!(hash));
