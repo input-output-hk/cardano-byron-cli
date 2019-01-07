@@ -129,9 +129,6 @@ workflows:
     - test_release:
         requires:
         - cargo_fetch
-    - test_nightly:
-        requires:
-        - cargo_fetch
     - coverage:
         requires:
         - test
