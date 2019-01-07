@@ -1,6 +1,6 @@
-use std::{io::{Write, Result}};
+use std::io::{Result, Write};
 
-use cardano::block::{Block, boundary, normal, sign, types};
+use cardano::block::{boundary, normal, sign, types, Block};
 use cardano::{address, tx};
 
 use super::term::style::{Style, StyledObject};
@@ -10,16 +10,27 @@ static DISPLAY_INDENT_SIZE: usize = 4; // spaces
 
 pub trait Pretty {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write;
+    where
+        W: Write;
 }
 
-fn pretty_attribute<P: Pretty, W: Write>(w: &mut W, indent: usize, k: &'static str, v: P) -> Result<()> {
+fn pretty_attribute<P: Pretty, W: Write>(
+    w: &mut W,
+    indent: usize,
+    k: &'static str,
+    v: P,
+) -> Result<()> {
     write!(w, "{:width$}{}: ", "", k, width = indent)?;
     v.pretty(w, indent + DISPLAY_INDENT_SIZE)?;
     writeln!(w, "")?;
     Ok(())
 }
-fn pretty_object<P: Pretty, W: Write>(w: &mut W, indent: usize, k: &'static str, v: P) -> Result<()> {
+fn pretty_object<P: Pretty, W: Write>(
+    w: &mut W,
+    indent: usize,
+    k: &'static str,
+    v: P,
+) -> Result<()> {
     writeln!(w, "{:width$}{}:", "", k, width = indent)?;
     v.pretty(w, indent + DISPLAY_INDENT_SIZE)?;
     writeln!(w, "")?;
@@ -28,7 +39,8 @@ fn pretty_object<P: Pretty, W: Write>(w: &mut W, indent: usize, k: &'static str,
 
 impl<'a> Pretty for &'a str {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{}", self)
     }
@@ -36,7 +48,8 @@ impl<'a> Pretty for &'a str {
 
 impl<D: ::std::fmt::Display> Pretty for StyledObject<D> {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{}", self)
     }
@@ -44,16 +57,18 @@ impl<D: ::std::fmt::Display> Pretty for StyledObject<D> {
 
 impl<'a, D: ::std::fmt::Display> Pretty for &'a StyledObject<D> {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{}", self)
     }
 }
 
 fn pretty_iterator<I, D, W>(w: &mut W, indent: usize, iter: I) -> Result<()>
-    where I: IntoIterator<Item = D>
-        , D: Pretty
-        , W: Write
+where
+    I: IntoIterator<Item = D>,
+    D: Pretty,
+    W: Write,
 {
     for e in iter {
         write!(w, "{:width$}", "", width = indent)?;
@@ -65,7 +80,8 @@ fn pretty_iterator<I, D, W>(w: &mut W, indent: usize, iter: I) -> Result<()>
 
 impl<D: Pretty> Pretty for Vec<D> {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_iterator(f, indent, self.into_iter())
     }
@@ -73,7 +89,8 @@ impl<D: Pretty> Pretty for Vec<D> {
 
 impl Pretty for Block {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         match self {
             Block::BoundaryBlock(blk) => blk.pretty(f, indent),
@@ -83,7 +100,8 @@ impl Pretty for Block {
 }
 impl Pretty for boundary::Block {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_object(f, indent, "header", self.header)?;
         pretty_object(f, indent, "body", self.body)?;
@@ -93,7 +111,8 @@ impl Pretty for boundary::Block {
 }
 impl Pretty for normal::Block {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_object(f, indent, "header", self.header)?;
         pretty_object(f, indent, "body", self.body)?;
@@ -103,7 +122,8 @@ impl Pretty for normal::Block {
 }
 impl Pretty for boundary::Body {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         // pretty_attribute(f, indent, "ssc", self.ssc)?;
         pretty_object(f, indent, "slot_leaders", self.slot_leaders)?;
@@ -114,7 +134,8 @@ impl Pretty for boundary::Body {
 }
 impl Pretty for normal::Body {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         // pretty_attribute(f, indent, "ssc", self.ssc)?;
         self.tx.pretty(f, indent)?;
@@ -125,14 +146,16 @@ impl Pretty for normal::Body {
 }
 impl Pretty for normal::TxPayload {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_iterator(f, indent, self.into_iter())
     }
 }
 impl Pretty for tx::TxAux {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_object(f, indent, "tx", self.tx)?;
         pretty_object(f, indent, "witnesses", self.witness.to_vec())?;
@@ -141,7 +164,8 @@ impl Pretty for tx::TxAux {
 }
 impl Pretty for tx::Tx {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_object(f, indent, "inputs", self.inputs)?;
         pretty_object(f, indent, "outputs", self.outputs)?;
@@ -150,38 +174,48 @@ impl Pretty for tx::Tx {
 }
 impl Pretty for tx::TxoPointer {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{}@{}", style!(self.id), style!(self.index).yellow())
     }
 }
 impl Pretty for tx::TxOut {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{} {}", style!(self.address), style!(self.value))
     }
 }
 impl Pretty for tx::TxInWitness {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         match self {
-            tx::TxInWitness::PkWitness(xpub, signature) => {
-                write!(f, "{} {} ({})", style!(xpub), style!(signature), style!("Public Key"))
-            },
-            tx::TxInWitness::ScriptWitness(_, _) => {
-                write!(f, "({})", style!("Script"))
-            },
-            tx::TxInWitness::RedeemWitness(public, signature) => {
-                write!(f, "{} {} ({})", style!(public), style!(signature), style!("Redeem"))
-            },
+            tx::TxInWitness::PkWitness(xpub, signature) => write!(
+                f,
+                "{} {} ({})",
+                style!(xpub),
+                style!(signature),
+                style!("Public Key")
+            ),
+            tx::TxInWitness::ScriptWitness(_, _) => write!(f, "({})", style!("Script")),
+            tx::TxInWitness::RedeemWitness(public, signature) => write!(
+                f,
+                "{} {} ({})",
+                style!(public),
+                style!(signature),
+                style!("Redeem")
+            ),
         }
     }
 }
 impl Pretty for address::StakeholderId {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         write!(f, "{}", style!(self))
     }
@@ -189,7 +223,8 @@ impl Pretty for address::StakeholderId {
 
 impl Pretty for boundary::BlockHeader {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_attribute(f, indent, "protocol_magic", style!(self.protocol_magic))?;
         pretty_attribute(f, indent, "previous_header", style!(self.previous_header))?;
@@ -201,7 +236,8 @@ impl Pretty for boundary::BlockHeader {
 }
 impl Pretty for normal::BlockHeader {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_attribute(f, indent, "protocol_magic", style!(self.protocol_magic))?;
         pretty_attribute(f, indent, "previous_header", style!(self.previous_header))?;
@@ -213,7 +249,8 @@ impl Pretty for normal::BlockHeader {
 
 impl Pretty for boundary::Consensus {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_attribute(f, indent, "epochid", style!(self.epoch).red().bold())?;
         pretty_attribute(f, indent, "chain_difficulty", style!(self.chain_difficulty))?;
@@ -222,7 +259,8 @@ impl Pretty for boundary::Consensus {
 }
 impl Pretty for normal::Consensus {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_attribute(f, indent, "slotid", style!(self.slot_id))?;
         pretty_attribute(f, indent, "leader_key", style!(self.leader_key))?;
@@ -230,7 +268,7 @@ impl Pretty for normal::Consensus {
         match self.block_signature {
             sign::BlockSignature::Signature(blk) => {
                 pretty_attribute(f, indent, "block_signature", style!(blk))?;
-            },
+            }
             _ => {
                 // TODO
             }
@@ -242,7 +280,8 @@ impl Pretty for normal::Consensus {
 
 impl Pretty for normal::BodyProof {
     fn pretty<W>(self, f: &mut W, indent: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         pretty_attribute(f, indent, "tx", self.tx)?;
         pretty_attribute(f, indent, "mpc", self.mpc)?;
@@ -255,25 +294,37 @@ impl Pretty for normal::BodyProof {
 
 impl Pretty for tx::TxProof {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
-        writeln!(f, "{} {} {}", style!(self.number), style!(self.root), style!(self.witnesses_hash))
+        writeln!(
+            f,
+            "{} {} {}",
+            style!(self.number),
+            style!(self.root),
+            style!(self.witnesses_hash)
+        )
     }
 }
 impl Pretty for types::SscProof {
     fn pretty<W>(self, f: &mut W, _: usize) -> Result<()>
-        where W: Write
+    where
+        W: Write,
     {
         match self {
-            types::SscProof::Commitments(h1, h2) => {
-                write!(f, "{} {} ({})", style!(h1), style!(h2), style!("Commitments"))
-            },
+            types::SscProof::Commitments(h1, h2) => write!(
+                f,
+                "{} {} ({})",
+                style!(h1),
+                style!(h2),
+                style!("Commitments")
+            ),
             types::SscProof::Openings(h1, h2) => {
                 write!(f, "{} {} ({})", style!(h1), style!(h2), style!("Openings"))
-            },
+            }
             types::SscProof::Shares(h1, h2) => {
                 write!(f, "{} {} ({})", style!(h1), style!(h2), style!("Shares"))
-            },
+            }
             types::SscProof::Certificate(h1) => {
                 write!(f, "{} ({})", style!(h1), style!("Certificate"))
             }

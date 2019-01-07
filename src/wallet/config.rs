@@ -3,15 +3,15 @@ use std::{
     str::FromStr,
 };
 
-use cardano::{hdwallet::{self, DerivationScheme}};
+use cardano::hdwallet::{self, DerivationScheme};
 
+use super::super::utils::password_encrypted::{self, Password};
 use super::Error;
 use super::Result;
-use super::super::utils::password_encrypted::{self, Password};
 use blockchain::{BlockchainName, BlockchainNameError};
 
 /// directory where all the wallet will be in
-pub const WALLETS_DIRECTORY : &'static str = "wallets";
+pub const WALLETS_DIRECTORY: &'static str = "wallets";
 
 pub fn wallet_directory<P: AsRef<Path>>(root_dir: P) -> PathBuf {
     root_dir.as_ref().join(WALLETS_DIRECTORY)
@@ -33,7 +33,7 @@ pub fn directory<P: AsRef<Path>>(root_dir: P, name: &str) -> PathBuf {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Copy, Clone)]
 pub enum HDWalletModel {
     BIP44,
-    RandomIndex2Levels
+    RandomIndex2Levels,
 }
 
 /// this is the wallet configuration and will be saved to the local disk
@@ -52,18 +52,18 @@ pub struct Config {
 
     /// This is needed so we know what kind of wallet HD we are dealing with
     ///
-    pub hdwallet_model: HDWalletModel
+    pub hdwallet_model: HDWalletModel,
 }
 impl Config {
-    pub fn attached_blockchain(&self) -> ::std::result::Result<Option<BlockchainName>, BlockchainNameError> {
+    pub fn attached_blockchain(
+        &self,
+    ) -> ::std::result::Result<Option<BlockchainName>, BlockchainNameError> {
         match self.attached_blockchain {
             None => Ok(None),
-            Some(ref s) => {
-                match BlockchainName::from_str(&s) {
-                    Ok(v) => Ok(Some(v)),
-                    Err(err) => Err(err)
-                }
-            }
+            Some(ref s) => match BlockchainName::from_str(&s) {
+                Ok(v) => Ok(Some(v)),
+                Err(err) => Err(err),
+            },
         }
     }
 }
@@ -72,7 +72,7 @@ impl Default for Config {
         Config {
             attached_blockchain: None,
             derivation_scheme: DerivationScheme::V2,
-            hdwallet_model: HDWalletModel::BIP44
+            hdwallet_model: HDWalletModel::BIP44,
         }
     }
 }
@@ -94,19 +94,17 @@ pub fn encrypt_primary_key(password: &Password, xprv: &hdwallet::XPrv) -> Vec<u8
 ///
 pub fn decrypt_primary_key(password: &Password, encrypted_key: &[u8]) -> Result<hdwallet::XPrv> {
     let xprv_vec = match password_encrypted::decrypt(password, encrypted_key) {
-        None        => return Err(Error::CannotRetrievePrivateKeyInvalidPassword),
-        Some(bytes) => bytes
+        None => return Err(Error::CannotRetrievePrivateKeyInvalidPassword),
+        Some(bytes) => bytes,
     };
 
     if xprv_vec.len() != hdwallet::XPRV_SIZE {
-        return Err(
-            Error::CannotRetrievePrivateKey(
-                hdwallet::Error::InvalidXPrvSize(xprv_vec.len())
-            )
-        )
+        return Err(Error::CannotRetrievePrivateKey(
+            hdwallet::Error::InvalidXPrvSize(xprv_vec.len()),
+        ));
     }
 
-    let mut xprv_bytes = [0;hdwallet::XPRV_SIZE];
+    let mut xprv_bytes = [0; hdwallet::XPRV_SIZE];
     xprv_bytes.copy_from_slice(&xprv_vec[..]);
 
     Ok(hdwallet::XPrv::from_bytes_verified(xprv_bytes)?)

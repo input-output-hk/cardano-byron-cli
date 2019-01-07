@@ -4,6 +4,13 @@ set -ex
 
 # TODO This is the "test phase", tweak it as you see fit
 main() {
+    case $TARGET in
+        rustfmt-preview)
+           cargo fmt -- --check
+           return ${?}
+           ;;
+    esac
+
     cross build --target $TARGET
     cross build --target $TARGET --release
 

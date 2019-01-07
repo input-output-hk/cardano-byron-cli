@@ -1,11 +1,10 @@
 use cardano::{block::Block, tx::TxAux};
 use cardano_storage as storage;
 
-use indicatif::ProgressBar;
 use super::ptr::StatePtr;
+use indicatif::ProgressBar;
 
-pub struct TransactionIterator<'a>
-{
+pub struct TransactionIterator<'a> {
     block_iterator: storage::iter::Iter<'a>,
     progress: ProgressBar,
 
@@ -51,7 +50,7 @@ impl<'a> TransactionIterator<'a> {
         TransactionIterator {
             block_iterator: block_iterator,
             progress: progress,
-            current_tx: None
+            current_tx: None,
         }
     }
 }
@@ -69,15 +68,15 @@ impl<'a> Iterator for TransactionIterator<'a> {
                     None => {
                         self.progress.finish();
                         None
-                    },
+                    }
                     Some(r) => {
-                        if let Some(( _, ref mut idx)) = &mut self.current_tx {
+                        if let Some((_, ref mut idx)) = &mut self.current_tx {
                             *idx += 1;
                         }
                         Some(Ok(r))
                     }
                 }
-            },
+            }
             Some(r) => {
                 if let Some((_, ref mut idx)) = &mut self.current_tx {
                     *idx += 1;

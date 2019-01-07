@@ -1,7 +1,14 @@
-use super::{Operation, Input, Output, Change};
-use cardano::{tx::{TxoPointer, TxOut, TxWitness, TxInWitness}, address::{ExtendedAddr}};
-use cardano::{txbuild::{self, TxBuilder, TxFinalized}, fee::{LinearFee}, txutils::{OutputPolicy}};
-use std::{fmt, error};
+use super::{Change, Input, Operation, Output};
+use cardano::{
+    address::ExtendedAddr,
+    tx::{TxInWitness, TxOut, TxWitness, TxoPointer},
+};
+use cardano::{
+    fee::LinearFee,
+    txbuild::{self, TxBuilder, TxFinalized},
+    txutils::OutputPolicy,
+};
+use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
@@ -60,7 +67,7 @@ impl fmt::Display for Error {
     }
 }
 impl error::Error for Error {
-    fn cause(&self) -> Option<& error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match self {
             Error::CannotFinalizeAFinalizedTransaction => None,
             Error::CannotAddWitnessesToAnOpenedTransaction => None,
@@ -82,7 +89,6 @@ impl error::Error for Error {
 
 type Result<T> = ::std::result::Result<T, Error>;
 
-
 /// describe a transaction in its most reduce representation
 ///
 /// Transaction are not meant to be edited from this representation
@@ -98,11 +104,11 @@ type Result<T> = ::std::result::Result<T, Error>;
 ///
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    pub inputs:    Vec<Input>,
-    pub outputs:   Vec<Output>,
-    pub changes:   Vec<Change>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub changes: Vec<Change>,
     pub witnesses: TxWitness,
-    pub finalized: bool
+    pub finalized: bool,
 }
 impl Transaction {
     /// create an empty transaction
@@ -119,19 +125,31 @@ impl Transaction {
     pub fn mk_txbuilder(&self) -> Result<(TxBuilder, Vec<TxOut>)> {
         let mut builder = TxBuilder::new();
         for input in self.inputs.iter() {
-            let ptr = TxoPointer { id: input.transaction_id, index: input.index_in_transaction };
+            let ptr = TxoPointer {
+                id: input.transaction_id,
+                index: input.index_in_transaction,
+            };
             let value = input.expected_value;
             builder.add_input(&ptr, value);
         }
         for output in self.outputs.iter() {
-            let out = TxOut { address: output.address.clone(), value: output.amount };
+            let out = TxOut {
+                address: output.address.clone(),
+                value: output.amount,
+            };
             builder.add_output_value(&out);
         }
-        let changes_used = if self.changes.len() == 1 && (! self.inputs().is_empty()) {
+        let changes_used = if self.changes.len() == 1 && (!self.inputs().is_empty()) {
             let fee_algorithm = LinearFee::default();
-            builder.add_output_policy(&fee_algorithm, &OutputPolicy::One(self.changes[0].address.clone()))
+            builder
+                .add_output_policy(
+                    &fee_algorithm,
+                    &OutputPolicy::One(self.changes[0].address.clone()),
+                )
                 .map_err(Error::ErrorWhenApplyingOutputPolicy)?
-        } else { Vec::new() };
+        } else {
+            Vec::new()
+        };
 
         Ok((builder, changes_used))
     }
@@ -139,14 +157,15 @@ impl Transaction {
     pub fn mk_finalized(&self) -> Result<(TxFinalized, Vec<TxOut>)> {
         let (builder, changes_used) = self.mk_txbuilder()?;
 
-        if ! self.is_finalized() {
+        if !self.is_finalized() {
             return Err(Error::TransactionNotFinalized);
         }
         let tx = builder.make_tx().map_err(Error::CannotBuildTxFromBuilder)?;
         let mut finalized = TxFinalized::new(tx);
 
         for signature in self.witnesses.iter() {
-            finalized.add_witness(signature.clone())
+            finalized
+                .add_witness(signature.clone())
                 .map_err(Error::CannotBuildTxFromBuilder)?;
         }
 
@@ -156,56 +175,80 @@ impl Transaction {
     /// update the transaction with the given operation
     pub fn update_with(&mut self, operation: Operation) -> Result<&mut Self> {
         match operation {
-            Operation::AddInput(input)     => self.add_input(input),
-            Operation::AddOutput(output)   => self.add_output(output),
-            Operation::AddChange(change)   => self.add_change(change),
-            Operation::RemoveInput(txin)   => self.remove_input(txin),
+            Operation::AddInput(input) => self.add_input(input),
+            Operation::AddOutput(output) => self.add_output(output),
+            Operation::AddChange(change) => self.add_change(change),
+            Operation::RemoveInput(txin) => self.remove_input(txin),
             Operation::RemoveOutput(index) => self.remove_output(index),
-            Operation::RemoveChange(addr)  => self.remove_change(addr),
-            Operation::Signature(witness)  => self.add_witness(witness),
-            Operation::Finalize            => self.finalize(),
+            Operation::RemoveChange(addr) => self.remove_change(addr),
+            Operation::Signature(witness) => self.add_witness(witness),
+            Operation::Finalize => self.finalize(),
         }
     }
 
     /// accessor to all of the transaction's inputs.
-    pub fn inputs<'a>(&'a self) -> &'a [Input] { self.inputs.as_ref() }
+    pub fn inputs<'a>(&'a self) -> &'a [Input] {
+        self.inputs.as_ref()
+    }
 
     /// accessor to all of the transaction's outputs. Ordered as it is in the
     /// transaction.
-    pub fn outputs<'a>(&'a self) -> &'a [Output] { self.outputs.as_ref() }
+    pub fn outputs<'a>(&'a self) -> &'a [Output] {
+        self.outputs.as_ref()
+    }
 
     /// returns reference to the change
-    pub fn changes<'a>(&'a self) -> &'a [Change] { self.changes.as_ref() }
+    pub fn changes<'a>(&'a self) -> &'a [Change] {
+        self.changes.as_ref()
+    }
 
-    pub fn signature<'a>(&'a self) -> &'a [TxInWitness] { self.witnesses.as_ref() }
+    pub fn signature<'a>(&'a self) -> &'a [TxInWitness] {
+        self.witnesses.as_ref()
+    }
 
-    pub fn has_change(&self) -> bool { ! self.changes.is_empty() }
+    pub fn has_change(&self) -> bool {
+        !self.changes.is_empty()
+    }
 
-    pub fn is_finalized(&self) -> bool { self.finalized }
+    pub fn is_finalized(&self) -> bool {
+        self.finalized
+    }
 
     /// lookup the inputs for the given `TxoPointer`
     pub fn lookup_input(&self, txin: TxoPointer) -> Option<usize> {
-        self.inputs().iter().position(|input| &input.extract_txin() == &txin)
+        self.inputs()
+            .iter()
+            .position(|input| &input.extract_txin() == &txin)
     }
 
     fn add_output(&mut self, output: Output) -> Result<&mut Self> {
-        if self.is_finalized() { return Err(Error::CannotAddOutputToAFinalizedTransaction); }
+        if self.is_finalized() {
+            return Err(Error::CannotAddOutputToAFinalizedTransaction);
+        }
         self.outputs.push(output);
         Ok(self)
     }
     fn add_input(&mut self, input: Input) -> Result<&mut Self> {
-        if self.is_finalized() { return Err(Error::CannotAddInputsToAFinalizedTransaction); }
+        if self.is_finalized() {
+            return Err(Error::CannotAddInputsToAFinalizedTransaction);
+        }
         self.inputs.push(input);
         Ok(self)
     }
     fn add_change(&mut self, change: Change) -> Result<&mut Self> {
-        if self.is_finalized() { return Err(Error::CannotAddChangeToAFinalizedTransaction); }
-        if ! self.changes.is_empty() { return Err(Error::MoreThanOneChangeAddressIsNotSupportedYet); }
+        if self.is_finalized() {
+            return Err(Error::CannotAddChangeToAFinalizedTransaction);
+        }
+        if !self.changes.is_empty() {
+            return Err(Error::MoreThanOneChangeAddressIsNotSupportedYet);
+        }
         self.changes.push(change);
         Ok(self)
     }
     fn add_witness(&mut self, witness: TxInWitness) -> Result<&mut Self> {
-        if ! self.is_finalized() { return Err(Error::CannotAddWitnessesToAnOpenedTransaction); }
+        if !self.is_finalized() {
+            return Err(Error::CannotAddWitnessesToAnOpenedTransaction);
+        }
         if self.inputs.len() <= self.witnesses.len() {
             return Err(Error::CannotAddMoreWitnessesThanInputs);
         }
@@ -230,10 +273,12 @@ impl Transaction {
                 let input = self.inputs.remove(index);
                 removed = true;
                 debug!("removing input: {:#?}", input);
-            } else { index += 1; }
+            } else {
+                index += 1;
+            }
         }
 
-        if ! removed {
+        if !removed {
             Err(Error::CannotRemoveInputInputNotFound)
         } else {
             Ok(self)
@@ -252,7 +297,7 @@ impl Transaction {
         Ok(self)
     }
 
-    fn remove_change(&mut self, addr: ExtendedAddr) -> Result<& mut Self> {
+    fn remove_change(&mut self, addr: ExtendedAddr) -> Result<&mut Self> {
         let mut index = 0;
 
         let mut removed = false;
@@ -264,24 +309,28 @@ impl Transaction {
                 let change = self.changes.remove(index);
                 removed = true;
                 debug!("removing change: {:#?}", change);
-            } else { index += 1; }
+            } else {
+                index += 1;
+            }
         }
 
-        if ! removed {
+        if !removed {
             Err(Error::CannotRemoveChangeChangeNotFound)
         } else {
             Ok(self)
         }
     }
 
-    pub fn finalize(&mut self) -> Result<& mut Self> {
-        if self.finalized { return Err(Error::CannotFinalizeAFinalizedTransaction); }
+    pub fn finalize(&mut self) -> Result<&mut Self> {
+        if self.finalized {
+            return Err(Error::CannotFinalizeAFinalizedTransaction);
+        }
         self.finalized = true;
         Ok(self)
     }
-
-
 }
 impl Default for Transaction {
-    fn default() -> Self { Transaction::new() }
+    fn default() -> Self {
+        Transaction::new()
+    }
 }

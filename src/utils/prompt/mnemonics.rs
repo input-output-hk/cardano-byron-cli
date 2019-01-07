@@ -1,21 +1,37 @@
-use cardano::{bip::bip39::{self, dictionary::Language}};
-use console::{style};
-use dialoguer::{Input, Confirmation};
-use super::super::term::{Term};
+use super::super::term::Term;
+use cardano::bip::bip39::{self, dictionary::Language};
+use console::style;
+use dialoguer::{Confirmation, Input};
 
 fn interactive_input_word<D>(term: &mut Term, dic: &D, idx: usize, count: usize) -> String
-    where D: Language
+where
+    D: Language,
 {
     loop {
-        let word : String = Input::new().with_prompt(&format!("mnemonic [{}/{}]", style(idx).cyan(), style(count).cyan().bold()))
+        let word: String = Input::new()
+            .with_prompt(&format!(
+                "mnemonic [{}/{}]",
+                style(idx).cyan(),
+                style(count).cyan().bold()
+            ))
             .interact()
             .unwrap();
 
         match dic.lookup_mnemonic(&word) {
             Ok(_) => return word,
             Err(bip39::dictionary::Error::MnemonicWordNotFoundInDictionary(_)) => {
-                let prompt = format!("`{}' is not a valid mnemonic word in `{}'", style(word).italic().red(), style(dic.name()).bold().white());
-                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
+                let prompt = format!(
+                    "`{}' is not a valid mnemonic word in `{}'",
+                    style(word).italic().red(),
+                    style(dic.name()).bold().white()
+                );
+                while !Confirmation::new()
+                    .with_text(&prompt)
+                    .default(true)
+                    .show_default(true)
+                    .interact()
+                    .unwrap()
+                {}
             }
         }
     }
@@ -23,12 +39,9 @@ fn interactive_input_word<D>(term: &mut Term, dic: &D, idx: usize, count: usize)
 
 type PromptedMnemonics = (bip39::MnemonicString, bip39::Mnemonics, bip39::Entropy);
 
-
-fn process_mnemonics<D>( dic: &D
-                       , string: String
-                       )
-    -> bip39::Result<PromptedMnemonics>
-        where D: Language
+fn process_mnemonics<D>(dic: &D, string: String) -> bip39::Result<PromptedMnemonics>
+where
+    D: Language,
 {
     let string = bip39::MnemonicString::new(dic, string)?;
     let mnemonics = bip39::Mnemonics::from_string(dic, &string)?;
@@ -37,12 +50,13 @@ fn process_mnemonics<D>( dic: &D
     Ok((string, mnemonics, entropy))
 }
 
-fn validate_mnemonics<D>( dic: &D
-                        , size: bip39::Type
-                        , string: String
-                        )
-    -> Result<PromptedMnemonics, String>
-        where D: Language
+fn validate_mnemonics<D>(
+    dic: &D,
+    size: bip39::Type,
+    string: String,
+) -> Result<PromptedMnemonics, String>
+where
+    D: Language,
 {
     match process_mnemonics(dic, string) {
         Err(err) => {
@@ -51,27 +65,35 @@ fn validate_mnemonics<D>( dic: &D
                 bip39::Error::InvalidChecksum(_, _) => {
                     let prompt = String::from("Invalid mnemonics (checksum mismatch)");
                     Err(prompt)
-                },
+                }
                 _ => {
-                    let prompt = format!("Invalid mnemonics for language `{}'", style(dic.name()).bold().white());
+                    let prompt = format!(
+                        "Invalid mnemonics for language `{}'",
+                        style(dic.name()).bold().white()
+                    );
                     Err(prompt)
                 }
             }
-        },
+        }
         Ok(res) => {
             let entered_type = res.1.get_type();
             if size != entered_type {
-                let prompt = format!("Invalid mnemonics length. Expected {} mnemonics but received {}.", style(size).bold().white(), style(entered_type).red().bold());
+                let prompt = format!(
+                    "Invalid mnemonics length. Expected {} mnemonics but received {}.",
+                    style(size).bold().white(),
+                    style(entered_type).red().bold()
+                );
                 Err(prompt)
             } else {
                 Ok(res)
             }
-        },
+        }
     }
 }
 
 pub fn interactive_input_words<D>(term: &mut Term, dic: &D, size: bip39::Type) -> PromptedMnemonics
-    where D: Language
+where
+    D: Language,
 {
     let count = size.mnemonic_count();
 
@@ -88,28 +110,49 @@ pub fn interactive_input_words<D>(term: &mut Term, dic: &D, size: bip39::Type) -
         }
 
         match validate_mnemonics(dic, size, string) {
-            Ok(res) => { return res; },
+            Ok(res) => {
+                return res;
+            }
             Err(prompt) => {
-                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
+                while !Confirmation::new()
+                    .with_text(&prompt)
+                    .default(true)
+                    .show_default(true)
+                    .interact()
+                    .unwrap()
+                {}
             }
         }
     }
 }
 
 pub fn input_mnemonic_phrase<D>(term: &mut Term, dic: &D, size: bip39::Type) -> PromptedMnemonics
-    where D: Language
+where
+    D: Language,
 {
     let count = size.mnemonic_count();
 
     loop {
-        let string = Input::new().with_prompt(&format!("Please enter all your {} mnemonics", style(count).bold().red()))
+        let string = Input::new()
+            .with_prompt(&format!(
+                "Please enter all your {} mnemonics",
+                style(count).bold().red()
+            ))
             .interact()
             .unwrap();
 
         match validate_mnemonics(dic, size, string) {
-            Ok(res) => { return res; },
+            Ok(res) => {
+                return res;
+            }
             Err(prompt) => {
-                while ! Confirmation::new().with_text(&prompt).default(true).show_default(true).interact().unwrap() {}
+                while !Confirmation::new()
+                    .with_text(&prompt)
+                    .default(true)
+                    .show_default(true)
+                    .interact()
+                    .unwrap()
+                {}
             }
         }
     }

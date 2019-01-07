@@ -1,10 +1,10 @@
-use cardano::hdwallet;
-use cardano::{address::ExtendedAddr, hdwallet::XPrv};
-use cardano::wallet::rindex;
 use cardano::config::NetworkMagic;
+use cardano::hdwallet;
+use cardano::wallet::rindex;
+use cardano::{address::ExtendedAddr, hdwallet::XPrv};
 
+use super::super::utxo::UTxO;
 use super::{Address, AddressLookup, AddressLookupError};
-use super::super::{utxo::{UTxO}};
 
 pub struct RandomIndexLookup {
     generator: rindex::AddressGenerator<hdwallet::XPrv>,
@@ -17,10 +17,13 @@ impl RandomIndexLookup {
             network_magic: network_magic,
         }
     }
-    pub fn new(generator: rindex::AddressGenerator<hdwallet::XPrv>, network_magic: NetworkMagic) -> Self {
+    pub fn new(
+        generator: rindex::AddressGenerator<hdwallet::XPrv>,
+        network_magic: NetworkMagic,
+    ) -> Self {
         RandomIndexLookup {
             generator,
-            network_magic
+            network_magic,
         }
     }
 
@@ -49,8 +52,8 @@ impl AddressLookup for RandomIndexLookup {
         &mut self,
         utxo: UTxO<ExtendedAddr>,
     ) -> Result<Option<UTxO<Address>>, AddressLookupError> {
-        use cardano::wallet::rindex;
         use cardano::hdpayload;
+        use cardano::wallet::rindex;
         let opt_addressing = match self.generator.try_get_addressing(&utxo.credited_address) {
             Ok(addressing) => addressing,
             Err(rindex::Error::PayloadError(hdpayload::Error::PayloadIsTooLarge(_))) => None,
@@ -79,10 +82,7 @@ impl AddressLookup for RandomIndexLookup {
     /// or state to update.
     ///
     /// This function does nothing and always succeeds
-    fn acknowledge<A: Into<Address>>(
-        &mut self,
-        _: A,
-    ) -> Result<(), AddressLookupError> {
+    fn acknowledge<A: Into<Address>>(&mut self, _: A) -> Result<(), AddressLookupError> {
         Ok(())
     }
 }

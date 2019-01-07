@@ -1,7 +1,7 @@
-use std::path::{PathBuf};
-use super::{StagingId};
+use super::StagingId;
+use std::path::PathBuf;
 
-const TRANSACTION_DIR : &'static str = "transactions";
+const TRANSACTION_DIR: &'static str = "transactions";
 
 /// return the directory path where all the pending transactions are
 pub fn transaction_directory(root_dir: PathBuf) -> PathBuf {

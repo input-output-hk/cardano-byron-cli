@@ -7,35 +7,38 @@ pub mod emoji;
 pub mod style;
 
 use console;
-use indicatif;
 use dialoguer;
+use indicatif;
 
-pub use self::config::{Config, ColorChoice};
+pub use self::config::{ColorChoice, Config};
 
-use std::{io::{self, Write}, error::{Error}};
+use std::{
+    error::Error,
+    io::{self, Write},
+};
 
-pub const DEFAULT_TERM_WIDTH : usize = 80;
+pub const DEFAULT_TERM_WIDTH: usize = 80;
 pub const DEFAULT_TERM_HEIGHT: usize = 24;
 
 pub struct Style {
-    pub error:   console::Style,
+    pub error: console::Style,
     pub warning: console::Style,
     pub success: console::Style,
-    pub info:    console::Style,
+    pub info: console::Style,
 }
 impl Style {
     fn new(color_choice: &ColorChoice) -> Self {
         match color_choice {
-            ColorChoice::Auto   => { /* do nothing */ },
-            ColorChoice::Never  => { console::set_colors_enabled(false) },
-            ColorChoice::Always => { console::set_colors_enabled(true) },
+            ColorChoice::Auto => { /* do nothing */ }
+            ColorChoice::Never => console::set_colors_enabled(false),
+            ColorChoice::Always => console::set_colors_enabled(true),
         };
 
         Style {
-            error:   console::Style::new().red().bold(),
+            error: console::Style::new().red().bold(),
             warning: console::Style::new().red(),
             success: console::Style::new().green(),
-            info:    console::Style::new().cyan().italic(),
+            info: console::Style::new().cyan().italic(),
         }
     }
 }
@@ -46,19 +49,23 @@ pub struct Term {
 
     pub style: Style,
 
-    pub term: console::Term
+    pub term: console::Term,
 }
 impl Term {
     pub fn new(config: Config) -> Self {
         // make sure we are using a terminal for now
-        if ! console::user_attended() {
+        if !console::user_attended() {
             warn!("There might be issue with non user attended terminal");
         }
 
         let term = console::Term::stdout();
-        let style  = Style::new(&config.color);
+        let style = Style::new(&config.color);
 
-        Term { config, term, style }
+        Term {
+            config,
+            term,
+            style,
+        }
     }
 
     pub fn progress_bar(&self, count: u64) -> indicatif::ProgressBar {
@@ -66,8 +73,10 @@ impl Term {
         pb.enable_steady_tick(100);
         pb.set_style(
             indicatif::ProgressStyle::default_bar()
-                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-                .progress_chars("#>-")
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                )
+                .progress_chars("#>-"),
         );
         pb
     }
@@ -82,32 +91,49 @@ impl Term {
             // TODO: there seems to be an issue with rust crate: console
             //       the password read line is not working or not returning
             //       at all on windows 10 's `cmd` or `PowerShell`
-            let line = dialoguer::Input::new().with_prompt(prompt).default("".to_owned()).interact()?;
+            let line = dialoguer::Input::new()
+                .with_prompt(prompt)
+                .default("".to_owned())
+                .interact()?;
             self.term.move_cursor_up(1)?;
             self.term.clear_line()?;
             Ok(line)
         }
         #[cfg(not(windows))]
         {
-            dialoguer::PasswordInput::new().with_prompt(prompt).allow_empty_password(true).interact()
+            dialoguer::PasswordInput::new()
+                .with_prompt(prompt)
+                .allow_empty_password(true)
+                .interact()
         }
     }
 
-    pub fn new_password(&mut self, prompt: &str, confirmation: &str, mismatch_err: &str) -> io::Result<String> {
+    pub fn new_password(
+        &mut self,
+        prompt: &str,
+        confirmation: &str,
+        mismatch_err: &str,
+    ) -> io::Result<String> {
         #[cfg(windows)]
         {
             loop {
                 // TODO: there seems to be an issue with rust crate: console
                 //       the password read line is not working or not returning
                 //       at all on windows 10 's `cmd` or `PowerShell`
-                let line = dialoguer::Input::new().with_prompt(prompt).default("".to_owned()).interact()?;
+                let line = dialoguer::Input::new()
+                    .with_prompt(prompt)
+                    .default("".to_owned())
+                    .interact()?;
                 self.term.move_cursor_up(1)?;
                 self.term.clear_line()?;
-                let line2 = dialoguer::Input::new().with_prompt(confirmation).default("".to_owned()).interact()?;
+                let line2 = dialoguer::Input::new()
+                    .with_prompt(confirmation)
+                    .default("".to_owned())
+                    .interact()?;
                 self.term.move_cursor_up(1)?;
                 self.term.clear_line()?;
                 if line == line2 {
-                    return Ok(line)
+                    return Ok(line);
                 }
                 self.error(mismatch_err)?;
             }
@@ -139,25 +165,34 @@ impl Term {
     }
 
     pub fn fail_with<E>(&mut self, e: E) -> !
-        where E: Error
+    where
+        E: Error,
     {
-        let mut error : &Error = &e;
+        let mut error: &Error = &e;
         let formated = format!("{}", e);
         writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
         while let Some(err) = error.cause() {
             error = err;
             let formated = format!("{}", err);
-            writeln!(& mut self.term, "  |-> {}", self.style.warning.apply_to(formated));
+            writeln!(
+                &mut self.term,
+                "  |-> {}",
+                self.style.warning.apply_to(formated)
+            );
         }
         ::std::process::exit(1)
     }
 }
 impl ::std::ops::Deref for Term {
     type Target = console::Term;
-    fn deref(&self) -> &Self::Target { &self.term }
+    fn deref(&self) -> &Self::Target {
+        &self.term
+    }
 }
 impl ::std::ops::DerefMut for Term {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.term }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.term
+    }
 }
 impl io::Write for Term {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {

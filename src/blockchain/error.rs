@@ -1,7 +1,7 @@
-use std::{io, fmt, error, path::PathBuf};
 use cardano::block::{self, BlockDate, HeaderHash};
 use cardano_storage;
 use cbor_event;
+use std::{error, fmt, io, path::PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -34,11 +34,15 @@ pub enum Error {
 }
 
 impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self { Error::IoError(e) }
+    fn from(e: io::Error) -> Self {
+        Error::IoError(e)
+    }
 }
 
 impl From<cardano_storage::Error> for Error {
-    fn from(e: cardano_storage::Error) -> Self { Error::StorageError(e) }
+    fn from(e: cardano_storage::Error) -> Self {
+        Error::StorageError(e)
+    }
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -70,7 +74,7 @@ impl fmt::Display for Error {
     }
 }
 impl error::Error for Error {
-    fn cause(&self) -> Option<& error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match self {
             Error::IoError(ref err) => Some(err),
             Error::StorageError(ref err) => Some(err),
@@ -79,7 +83,7 @@ impl error::Error for Error {
             Error::CatMalformedBlock(ref err) => Some(err),
             Error::VerifyInvalidBlock(ref err) => Some(err),
             Error::VerifyMalformedBlock(ref err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }

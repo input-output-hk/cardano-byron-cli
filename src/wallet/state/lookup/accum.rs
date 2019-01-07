@@ -1,9 +1,13 @@
+use super::super::utxo::UTxO;
 use super::{Address, AddressLookup, AddressLookupError};
-use super::super::{utxo::{UTxO}};
 use cardano::address::ExtendedAddr;
 
 pub struct Accum();
-impl Default for Accum { fn default() -> Self { Accum() } }
+impl Default for Accum {
+    fn default() -> Self {
+        Accum()
+    }
+}
 
 impl AddressLookup for Accum {
     fn lookup(
@@ -14,7 +18,8 @@ impl AddressLookup for Accum {
     }
 
     fn acknowledge<A>(&mut self, _: A) -> Result<(), AddressLookupError>
-    where A: Into<Address>
+    where
+        A: Into<Address>,
     {
         Ok(())
     }

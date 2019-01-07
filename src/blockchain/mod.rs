@@ -1,7 +1,7 @@
-pub mod config;
 pub mod commands;
-pub mod peer;
+pub mod config;
 pub mod error;
+pub mod peer;
 
 pub use self::error::{Error, Result};
 
@@ -13,21 +13,23 @@ use std::{
     str::FromStr,
 };
 
-use exe_common::network::api::BlockRef;
-pub use exe_common::{config::net::{self, Config, Peer, Peers}, network, genesis_data, parse_genesis_data};
-use cardano_storage::{self as storage, tag, Storage, config::{StorageConfig}};
-use storage_units::utils::directory_name::{DirectoryName, DirectoryNameError};
 use cardano::block;
+use cardano_storage::{self as storage, config::StorageConfig, tag, Storage};
+use exe_common::network::api::BlockRef;
+pub use exe_common::{
+    config::net::{self, Config, Peer, Peers},
+    genesis_data, network, parse_genesis_data,
+};
+use storage_units::utils::directory_name::{DirectoryName, DirectoryNameError};
 
-pub const LOCAL_BLOCKCHAIN_TIP_TAG : &'static str = "tip";
+pub const LOCAL_BLOCKCHAIN_TIP_TAG: &'static str = "tip";
 
 pub type BlockchainNameError = DirectoryNameError;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockchainName(DirectoryName);
 impl BlockchainName {
-    pub fn from_os_str(os: OsString) -> ::std::result::Result<Self, DirectoryNameError>
-    {
+    pub fn from_os_str(os: OsString) -> ::std::result::Result<Self, DirectoryNameError> {
         DirectoryName::new(os).map(BlockchainName)
     }
 }
@@ -38,14 +40,20 @@ impl FromStr for BlockchainName {
     }
 }
 impl fmt::Display for BlockchainName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { self.0.fmt(f) }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 impl Deref for BlockchainName {
     type Target = <DirectoryName as Deref>::Target;
-    fn deref(&self) -> &Self::Target { self.0.deref() }
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
 }
 impl AsRef<str> for BlockchainName {
-    fn as_ref(&self) -> &str { self.0.as_ref() }
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
 }
 
 /// handy structure to use to manage and orginise a blockchain
@@ -96,7 +104,7 @@ impl Blockchain {
     }
 
     fn init_genesis_data(&self) -> Result<()> {
-        use std::{io::Write, fs::OpenOptions};
+        use std::{fs::OpenOptions, io::Write};
         let genesis_data = genesis_data::get_genesis_data(&self.config.genesis_prev)
             .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
@@ -104,19 +112,19 @@ impl Blockchain {
 
         debug!("writing genesis file: {:?}", path);
         let mut fs = OpenOptions::new()
-                    .read(true).write(true).create(true)
-                    .open(path)?;
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)?;
 
         fs.write_all(genesis_data.as_bytes())?;
         Ok(())
     }
 
     pub fn load_genesis_data(&self) -> Result<cardano::config::GenesisData> {
-        use std::{fs::OpenOptions};
+        use std::fs::OpenOptions;
         let path = self.dir.join("genesis.json");
-        let fs = OpenOptions::new()
-            .read(true)
-            .open(path)?;
+        let fs = OpenOptions::new().read(true).open(path)?;
 
         let genesis_data = parse_genesis_data::parse_genesis_data(fs);
 
@@ -153,12 +161,12 @@ impl Blockchain {
             dir,
             storage_config,
             storage,
-            config
+            config,
         };
 
         // compatibility with previously generated blockchain
         let genesis_file = blockchain.dir.join("genesis.json");
-        if ! genesis_file.exists() {
+        if !genesis_file.exists() {
             blockchain.init_genesis_data()?;
         }
 
@@ -185,31 +193,40 @@ impl Blockchain {
     }
 
     pub fn load_remote_tips(&self) -> Vec<(BlockRef, bool)> {
-        self.peers().map(|np| {
-            let peer = peer::Peer::prepare(self, np.name().to_owned());
-            peer.load_local_tip()
-        }).collect()
+        self.peers()
+            .map(|np| {
+                let peer = peer::Peer::prepare(self, np.name().to_owned());
+                peer.load_local_tip()
+            })
+            .collect()
     }
 
     /// remove a peer from the blockchain
     pub fn remove_peer(&mut self, remote_alias: String) {
-        self.config.peers = self.config.peers.iter().filter(|np| np.name() != remote_alias).cloned().collect();
+        self.config.peers = self
+            .config
+            .peers
+            .iter()
+            .filter(|np| np.name() != remote_alias)
+            .cloned()
+            .collect();
         let tag = self.mk_remote_tag(&remote_alias);
         tag::remove_tag(&self.storage, &tag);
     }
 
-    pub fn peers<'a>(&'a self)
-        -> impl Iterator<Item = &'a net::NamedPeer>
-    {
+    pub fn peers<'a>(&'a self) -> impl Iterator<Item = &'a net::NamedPeer> {
         self.config.peers.iter()
     }
 
     pub fn load_tip(&self) -> (BlockRef, bool) {
-        let genesis_ref = (BlockRef {
-            hash: self.config.genesis.clone(),
-            parent: self.config.genesis_prev.clone(),
-            date: block::BlockDate::Boundary(self.config.epoch_start)
-        }, true);
+        let genesis_ref = (
+            BlockRef {
+                hash: self.config.genesis.clone(),
+                parent: self.config.genesis_prev.clone(),
+                date: block::BlockDate::Boundary(self.config.epoch_start),
+            },
+            true,
+        );
         match self.storage.get_block_from_tag(LOCAL_BLOCKCHAIN_TIP_TAG) {
             Err(storage::Error::NoSuchTag) => genesis_ref,
             Err(err) => panic!(err),
@@ -217,11 +234,14 @@ impl Blockchain {
                 let header = block.get_header();
                 let hash = header.compute_hash();
                 let is_genesis = hash == genesis_ref.0.hash;
-                (BlockRef {
-                    hash: hash,
-                    parent: header.get_previous_header(),
-                    date: header.get_blockdate()
-                }, is_genesis)
+                (
+                    BlockRef {
+                        hash: hash,
+                        parent: header.get_previous_header(),
+                        date: header.get_blockdate(),
+                    },
+                    is_genesis,
+                )
             }
         }
     }
@@ -229,12 +249,19 @@ impl Blockchain {
         tag::write_hash(&self.storage, &LOCAL_BLOCKCHAIN_TIP_TAG, hh);
     }
 
-    pub fn iter<'a>(&'a self, from: block::HeaderHash, to: block::HeaderHash) -> storage::Result<storage::iter::Iter<'a>> {
+    pub fn iter<'a>(
+        &'a self,
+        from: block::HeaderHash,
+        to: block::HeaderHash,
+    ) -> storage::Result<storage::iter::Iter<'a>> {
         storage::iter::Iter::new(&self.storage, from, to)
     }
 
-    pub fn iter_to_tip<'a>(&'a self, from: block::HeaderHash) -> storage::Result<storage::iter::Iter<'a>> {
-        let to   = self.load_tip().0.hash;
+    pub fn iter_to_tip<'a>(
+        &'a self,
+        from: block::HeaderHash,
+    ) -> storage::Result<storage::iter::Iter<'a>> {
+        let to = self.load_tip().0.hash;
 
         self.iter(from, to)
     }

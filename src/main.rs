@@ -5,11 +5,11 @@ extern crate dirs;
 extern crate log;
 extern crate env_logger;
 
-extern crate cryptoxide;
-extern crate cbor_event;
 extern crate cardano;
-extern crate exe_common;
 extern crate cardano_storage;
+extern crate cbor_event;
+extern crate cryptoxide;
+extern crate exe_common;
 extern crate storage_units;
 
 extern crate console;
@@ -18,49 +18,52 @@ extern crate indicatif;
 
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
-extern crate serde_yaml;
-extern crate serde_json;
-extern crate rand;
-extern crate humantime;
 extern crate base64;
+extern crate humantime;
+extern crate rand;
+extern crate serde;
+extern crate serde_json;
+extern crate serde_yaml;
 
 #[macro_use]
 mod utils;
 mod blockchain;
-mod wallet;
-mod transaction;
 mod debug;
+mod transaction;
+mod wallet;
 
 use utils::term;
 
 #[macro_use]
 extern crate clap;
-use clap::{Arg, App, SubCommand, ArgMatches};
+use clap::{App, Arg, ArgMatches, SubCommand};
 
 fn main() {
     let default_root_dir = get_default_root_dir();
 
-    let commit_hash : &'static str = option_env!("TRAVIS_COMMIT")
+    let commit_hash: &'static str = option_env!("TRAVIS_COMMIT")
         .or_else(|| option_env!("APPVEYOR_REPO_COMMIT"))
         .unwrap_or("<not in release environment>");
 
     let matches = App::new(crate_name!())
         .version(crate_version!())
-        .long_version(format!(
-"version: {}
+        .long_version(
+            format!(
+                "version: {}
 commit: {}
-", crate_version!(), commit_hash).as_str()
-)
+",
+                crate_version!(),
+                commit_hash
+            )
+            .as_str(),
+        )
         .author(crate_authors!())
         .about("The Cardano Command Line Interface")
         .after_help(crate_description!())
-
         .arg(global_verbose_definition())
         .arg(global_quiet_definition())
         .arg(global_color_definition())
         .arg(global_rootdir_definition(&default_root_dir))
-
         .subcommand(blockchain_commands_definition())
         .subcommand(wallet_commands_definition())
         .subcommand(transaction_commands_definition())
@@ -74,10 +77,10 @@ commit: {}
     debug!("cardano-cli's root directory: `{:?}`", root_dir);
 
     match matches.subcommand() {
-        (BLOCKCHAIN_COMMAND, Some(matches))  => { subcommand_blockchain(term, root_dir, matches) },
-        (WALLET_COMMAND, Some(matches))      => { subcommand_wallet(term, root_dir, matches) },
-        (TRANSACTION_COMMAND, Some(matches)) => { subcommand_transaction(term, root_dir, matches) },
-        (DEBUG_COMMAND, Some(matches))       => { subcommand_debug(term, root_dir, matches) },
+        (BLOCKCHAIN_COMMAND, Some(matches)) => subcommand_blockchain(term, root_dir, matches),
+        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches),
+        (TRANSACTION_COMMAND, Some(matches)) => subcommand_transaction(term, root_dir, matches),
+        (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, root_dir, matches),
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -89,13 +92,13 @@ commit: {}
  *            Global options and helpers                                     *
  * ------------------------------------------------------------------------- */
 
-const APPLICATION_DIRECTORY_NAME : &'static str = "cardano-cli";
-const APPLICATION_ENVIRONMENT_ROOT_DIR : &'static str = "CARDANO_CLI_ROOT_DIR";
+const APPLICATION_DIRECTORY_NAME: &'static str = "cardano-cli";
+const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "CARDANO_CLI_ROOT_DIR";
 
 fn get_default_root_dir() -> PathBuf {
     match dirs::data_local_dir() {
-        None      => { unimplemented!()   },
-        Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME)
+        None => unimplemented!(),
+        Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
     }
 }
 fn global_rootdir_definition<'a, 'b>(default: &'a PathBuf) -> Arg<'a, 'b> {
@@ -107,12 +110,12 @@ fn global_rootdir_definition<'a, 'b>(default: &'a PathBuf) -> Arg<'a, 'b> {
 }
 fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> PathBuf {
     match matches.value_of("ROOT_DIR") {
-        Some(dir) => { PathBuf::from(dir) },
+        Some(dir) => PathBuf::from(dir),
 
         // technically the None option should not be needed
         // as we have already specified a default value
         // when defining the command line argument
-        None => { PathBuf::from(default) },
+        None => PathBuf::from(default),
     }
 }
 
@@ -137,10 +140,10 @@ fn global_color_definition<'a, 'b>() -> Arg<'a, 'b> {
 }
 fn global_color_option<'a>(matches: &ArgMatches<'a>) -> term::ColorChoice {
     match matches.value_of("COLOR") {
-        None            => term::ColorChoice::Auto,
-        Some("auto")    => term::ColorChoice::Auto,
-        Some("always")  => term::ColorChoice::Always,
-        Some("never")   => term::ColorChoice::Never,
+        None => term::ColorChoice::Auto,
+        Some("auto") => term::ColorChoice::Auto,
+        Some("always") => term::ColorChoice::Always,
+        Some("never") => term::ColorChoice::Never,
         Some(&_) => {
             // this should not be reachable `clap` will perform validation
             // checking of the possible_values given when creating the argument
@@ -165,7 +168,7 @@ fn configure_terminal<'a>(matches: &ArgMatches<'a>) -> term::Config {
     let color = global_color_option(matches);
     let verbosity = global_verbose_option(matches);
 
-    if ! quiet {
+    if !quiet {
         let log_level = match verbosity {
             0 => log::LevelFilter::Warn,
             1 => log::LevelFilter::Info,
@@ -179,7 +182,7 @@ fn configure_terminal<'a>(matches: &ArgMatches<'a>) -> term::Config {
 
     term::Config {
         color: color,
-        quiet: quiet
+        quiet: quiet,
     }
 }
 
@@ -187,43 +190,46 @@ fn configure_terminal<'a>(matches: &ArgMatches<'a>) -> term::Config {
  *            Blockchain Sub Commands and helpers                            *
  * ------------------------------------------------------------------------- */
 
-const BLOCKCHAIN_COMMAND : &'static str = "blockchain";
+const BLOCKCHAIN_COMMAND: &'static str = "blockchain";
 
-fn blockchain_argument_name_definition<'a, 'b>() -> Arg<'a,'b> {
+fn blockchain_argument_name_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("BLOCKCHAIN_NAME")
         .help("the blockchain name")
         .required(true)
 }
-fn blockchain_argument_name_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>) -> blockchain::BlockchainName {
+fn blockchain_argument_name_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+) -> blockchain::BlockchainName {
     match value_t!(matches, "BLOCKCHAIN_NAME", blockchain::BlockchainName) {
-        Ok(r) => { r },
-        Err(err) => { term.fail_with(err) },
+        Ok(r) => r,
+        Err(err) => term.fail_with(err),
     }
 }
-fn blockchain_argument_remote_alias_definition<'a, 'b>() -> Arg<'a,'b> {
+fn blockchain_argument_remote_alias_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("BLOCKCHAIN_REMOTE_ALIAS")
         .help("Alias given to a remote node.")
         .required(true)
 }
 fn blockchain_argument_remote_alias_match<'a>(matches: &ArgMatches<'a>) -> String {
     match matches.value_of("BLOCKCHAIN_REMOTE_ALIAS") {
-        Some(r) => { r.to_owned() },
-        None => { unreachable!() }
+        Some(r) => r.to_owned(),
+        None => unreachable!(),
     }
 }
-fn blockchain_argument_remote_endpoint_definition<'a, 'b>() -> Arg<'a,'b> {
+fn blockchain_argument_remote_endpoint_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("BLOCKCHAIN_REMOTE_ENDPOINT")
         .help("Remote end point (IPv4 or IPv6 address or domain name. May include a port number. And a sub-route point in case of an http endpoint.")
         .required(true)
 }
 fn blockchain_argument_remote_endpoint_match<'a>(matches: &ArgMatches<'a>) -> String {
     match matches.value_of("BLOCKCHAIN_REMOTE_ENDPOINT") {
-        Some(r) => { r.to_owned() },
-        None => { unreachable!() }
+        Some(r) => r.to_owned(),
+        None => unreachable!(),
     }
 }
 fn blockchain_argument_template_definition<'a, 'b>() -> Arg<'a, 'b> {
-    const AVAILABLE_TEMPLATES : &'static [&'static str] = &[ "mainnet", "staging", "testnet" ];
+    const AVAILABLE_TEMPLATES: &'static [&'static str] = &["mainnet", "staging", "testnet"];
 
     Arg::with_name("BLOCKCHAIN_TEMPLATE")
         .long("template")
@@ -233,9 +239,7 @@ fn blockchain_argument_template_definition<'a, 'b>() -> Arg<'a, 'b> {
         .possible_values(AVAILABLE_TEMPLATES)
         .default_value("mainnet")
 }
-fn blockchain_argument_template_match<'a>(matches: &ArgMatches<'a>)
-    -> blockchain::Config
-{
+fn blockchain_argument_template_match<'a>(matches: &ArgMatches<'a>) -> blockchain::Config {
     match matches.value_of("BLOCKCHAIN_TEMPLATE") {
         None => blockchain::Config::mainnet(),
         Some("mainnet") => blockchain::Config::mainnet(),
@@ -248,16 +252,26 @@ fn blockchain_argument_template_match<'a>(matches: &ArgMatches<'a>)
         }
     }
 }
-fn blockchain_argument_headhash_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>, name: &str) -> cardano::block::HeaderHash {
+fn blockchain_argument_headhash_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+    name: &str,
+) -> cardano::block::HeaderHash {
     match value_t!(matches, name, cardano::block::HeaderHash) {
         Ok(hh) => hh,
-        Err(err) => { term.fail_with(err) }
+        Err(err) => term.fail_with(err),
     }
 }
-fn blockchain_argument_opt_headhash_match<'a>(term: &mut term::Term, matches: &ArgMatches<'a>, name: &str) -> Option<cardano::block::HeaderHash> {
+fn blockchain_argument_opt_headhash_match<'a>(
+    term: &mut term::Term,
+    matches: &ArgMatches<'a>,
+    name: &str,
+) -> Option<cardano::block::HeaderHash> {
     if matches.is_present(name) {
         Some(blockchain_argument_headhash_match(term, matches, name))
-    } else { None }
+    } else {
+        None
+    }
 }
 
 fn blockchain_argument_blockdate_match<'a>(
@@ -267,7 +281,7 @@ fn blockchain_argument_blockdate_match<'a>(
 ) -> cardano::block::BlockDate {
     match value_t!(matches, name, cardano::block::BlockDate) {
         Ok(date) => date,
-        Err(err) => { term.fail_with(err) }
+        Err(err) => term.fail_with(err),
     }
 }
 
@@ -287,20 +301,9 @@ fn blockchain_argument_query_params_match<'a>(
     term: &mut term::Term,
     matches: &ArgMatches<'a>,
 ) -> blockchain::commands::QueryParams {
-    let start = blockchain_argument_opt_blockdate_match(
-        term,
-        matches,
-        "QUERY_START_DATE",
-    );
-    let end = blockchain_argument_opt_blockdate_match(
-        term,
-        matches,
-        "QUERY_END_DATE",
-    );
-    blockchain::commands::QueryParams {
-        start,
-        end,
-    }
+    let start = blockchain_argument_opt_blockdate_match(term, matches, "QUERY_START_DATE");
+    let end = blockchain_argument_opt_blockdate_match(term, matches, "QUERY_END_DATE");
+    blockchain::commands::QueryParams { start, end }
 }
 
 fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
@@ -310,14 +313,14 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
 
             blockchain::commands::list(&mut term, root_dir, detailed)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("new", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let net_config = blockchain_argument_template_match(&matches);
 
             blockchain::commands::new(&mut term, root_dir, name, net_config)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("remote-add", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let alias = blockchain_argument_remote_alias_match(&matches);
@@ -325,21 +328,22 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
 
             blockchain::commands::remote_add(&mut term, root_dir, name, alias, endpoint)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("remote-rm", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let alias = blockchain_argument_remote_alias_match(&matches);
 
             blockchain::commands::remote_rm(&mut term, root_dir, name, alias)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("remote-fetch", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let peers = values_t!(matches, "BLOCKCHAIN_REMOTE_ALIAS", String).unwrap_or_else(|_| Vec::new());
+            let peers = values_t!(matches, "BLOCKCHAIN_REMOTE_ALIAS", String)
+                .unwrap_or_else(|_| Vec::new());
 
             blockchain::commands::remote_fetch(&mut term, root_dir, name, peers)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("remote-ls", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let detailed = if matches.is_present("REMOTE_LS_DETAILED_SHORT") {
@@ -354,74 +358,86 @@ fn subcommand_blockchain<'a>(mut term: term::Term, root_dir: PathBuf, matches: &
 
             blockchain::commands::remote_ls(&mut term, root_dir, name, detailed)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("forward", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
-            let opt_hash = blockchain_argument_opt_headhash_match(&mut term, matches, "FORWARD_TO_BLOCK");
+            let opt_hash =
+                blockchain_argument_opt_headhash_match(&mut term, matches, "FORWARD_TO_BLOCK");
 
             blockchain::commands::forward(&mut term, root_dir, name, opt_hash)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("pull", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::pull(&mut term, root_dir, name)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("cat", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = blockchain_argument_headhash_match(&mut term, matches, "HASH_BLOCK");
             let no_parse = matches.is_present("BLOCK_NO_PARSE");
             let debug = matches.is_present("DEBUG");
             let encode_type = if matches.is_present("OUTPUT_RAW") {
-                Some(value_t_or_exit!(matches.value_of("OUTPUT_RAW"), blockchain::commands::RawEncodeType))
+                Some(value_t_or_exit!(
+                    matches.value_of("OUTPUT_RAW"),
+                    blockchain::commands::RawEncodeType
+                ))
             } else {
                 None
             };
 
-            blockchain::commands::cat(&mut term, root_dir, name, hash, no_parse, debug, encode_type)
-                .unwrap_or_else(|e| term.fail_with(e));
-        },
+            blockchain::commands::cat(
+                &mut term,
+                root_dir,
+                name,
+                hash,
+                no_parse,
+                debug,
+                encode_type,
+            )
+            .unwrap_or_else(|e| term.fail_with(e));
+        }
         ("status", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::status(&mut term, root_dir, name)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("destroy", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
 
             blockchain::commands::destroy(&mut term, root_dir, name)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("log", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = blockchain_argument_opt_headhash_match(&mut term, matches, "HASH_BLOCK");
 
             blockchain::commands::log(&mut term, root_dir, name, hash)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("verify-block", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let hash = blockchain_argument_headhash_match(&mut term, matches, "HASH_BLOCK");
 
             blockchain::commands::verify_block(&mut term, root_dir, name, hash)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("verify", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let stop_on_error = matches.is_present("STOP_FIRST_ERROR");
 
             blockchain::commands::verify_chain(&mut term, root_dir, name, stop_on_error)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         ("query", Some(matches)) => {
             let name = blockchain_argument_name_match(&mut term, &matches);
             let params = blockchain_argument_query_params_match(&mut term, &matches);
 
             blockchain::commands::query(&mut term, root_dir, name, params)
                 .unwrap_or_else(|e| term.fail_with(e));
-        },
+        }
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -584,15 +600,16 @@ fn blockchain_commands_definition<'a, 'b>() -> App<'a, 'b> {
  *                Wallet Sub Commands and helpers                            *
  * ------------------------------------------------------------------------- */
 
-fn wallet_argument_name_definition<'a, 'b>() -> Arg<'a,'b> {
+fn wallet_argument_name_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("WALLET_NAME")
         .help("the wallet name")
         .required(true)
 }
 fn wallet_argument_name_match<'a>(matches: &ArgMatches<'a>) -> wallet::WalletName {
     match matches.value_of("WALLET_NAME") {
-        Some(r) => { wallet::WalletName::new(r.to_owned()).expect("Wallet name is invalid. cannot contains . and /") },
-        None => { unreachable!() }
+        Some(r) => wallet::WalletName::new(r.to_owned())
+            .expect("Wallet name is invalid. cannot contains . and /"),
+        None => unreachable!(),
     }
 }
 fn wallet_argument_wallet_scheme<'a, 'b>() -> Arg<'a, 'b> {
@@ -605,9 +622,9 @@ fn wallet_argument_wallet_scheme<'a, 'b>() -> Arg<'a, 'b> {
 }
 fn wallet_argument_wallet_scheme_match<'a>(matches: &ArgMatches<'a>) -> wallet::HDWalletModel {
     match matches.value_of("WALLET_SCHEME") {
-        Some("bip44")                => wallet::HDWalletModel::BIP44,
+        Some("bip44") => wallet::HDWalletModel::BIP44,
         Some("random_index_2levels") => wallet::HDWalletModel::RandomIndex2Levels,
-        _ => unreachable!() // default is "bip44"
+        _ => unreachable!(), // default is "bip44"
     }
 }
 fn wallet_argument_mnemonic_languages<'a, 'b>() -> Arg<'a, 'b> {
@@ -621,21 +638,21 @@ fn wallet_argument_mnemonic_languages<'a, 'b>() -> Arg<'a, 'b> {
         .possible_values(&["chinese-simplified", "chinese-traditional", "english", "french", "italian", "japanese", "korean", "spanish"])
         .default_value("english")
 }
-fn wallet_argument_mnemonic_languages_match<'a>(matches: &ArgMatches<'a>)
-    -> Vec<impl cardano::bip::bip39::dictionary::Language>
-{
+fn wallet_argument_mnemonic_languages_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> Vec<impl cardano::bip::bip39::dictionary::Language> {
     let mut languages = Vec::new();
     for lan in matches.values_of("MNEMONIC_LANGUAGES").unwrap() {
         let value = match lan {
-            "chinese-simplified"  => cardano::bip::bip39::dictionary::CHINESE_SIMPLIFIED,
+            "chinese-simplified" => cardano::bip::bip39::dictionary::CHINESE_SIMPLIFIED,
             "chinese-traditional" => cardano::bip::bip39::dictionary::CHINESE_TRADITIONAL,
-            "english"             => cardano::bip::bip39::dictionary::ENGLISH,
-            "french"              => cardano::bip::bip39::dictionary::FRENCH,
-            "italian"             => cardano::bip::bip39::dictionary::ITALIAN,
-            "japanese"            => cardano::bip::bip39::dictionary::JAPANESE,
-            "korean"              => cardano::bip::bip39::dictionary::KOREAN,
-            "spanish"             => cardano::bip::bip39::dictionary::SPANISH,
-            _ => unreachable!() // clap knows the default values
+            "english" => cardano::bip::bip39::dictionary::ENGLISH,
+            "french" => cardano::bip::bip39::dictionary::FRENCH,
+            "italian" => cardano::bip::bip39::dictionary::ITALIAN,
+            "japanese" => cardano::bip::bip39::dictionary::JAPANESE,
+            "korean" => cardano::bip::bip39::dictionary::KOREAN,
+            "spanish" => cardano::bip::bip39::dictionary::SPANISH,
+            _ => unreachable!(), // clap knows the default values
         };
         languages.push(value);
     }
@@ -646,22 +663,31 @@ fn wallet_argument_mnemonic_language<'a, 'b>() -> Arg<'a, 'b> {
         .help("the language of the mnemonic words to recover the wallet from.")
         .long("mnemonics-language")
         .takes_value(true)
-        .possible_values(&["chinese-simplified", "chinese-traditional", "english", "french", "italian", "japanese", "korean", "spanish"])
+        .possible_values(&[
+            "chinese-simplified",
+            "chinese-traditional",
+            "english",
+            "french",
+            "italian",
+            "japanese",
+            "korean",
+            "spanish",
+        ])
         .default_value("english")
 }
-fn wallet_argument_mnemonic_language_match<'a>(matches: &ArgMatches<'a>)
-    -> impl cardano::bip::bip39::dictionary::Language
-{
+fn wallet_argument_mnemonic_language_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> impl cardano::bip::bip39::dictionary::Language {
     match matches.value_of("MNEMONIC_LANGUAGE").unwrap() {
-        "chinese-simplified"  => cardano::bip::bip39::dictionary::CHINESE_SIMPLIFIED,
+        "chinese-simplified" => cardano::bip::bip39::dictionary::CHINESE_SIMPLIFIED,
         "chinese-traditional" => cardano::bip::bip39::dictionary::CHINESE_TRADITIONAL,
-        "english"             => cardano::bip::bip39::dictionary::ENGLISH,
-        "french"              => cardano::bip::bip39::dictionary::FRENCH,
-        "italian"             => cardano::bip::bip39::dictionary::ITALIAN,
-        "japanese"            => cardano::bip::bip39::dictionary::JAPANESE,
-        "korean"              => cardano::bip::bip39::dictionary::KOREAN,
-        "spanish"             => cardano::bip::bip39::dictionary::SPANISH,
-        _ => unreachable!() // clap knows the default values
+        "english" => cardano::bip::bip39::dictionary::ENGLISH,
+        "french" => cardano::bip::bip39::dictionary::FRENCH,
+        "italian" => cardano::bip::bip39::dictionary::ITALIAN,
+        "japanese" => cardano::bip::bip39::dictionary::JAPANESE,
+        "korean" => cardano::bip::bip39::dictionary::KOREAN,
+        "spanish" => cardano::bip::bip39::dictionary::SPANISH,
+        _ => unreachable!(), // clap knows the default values
     }
 }
 fn wallet_argument_derivation_scheme<'a, 'b>() -> Arg<'a, 'b> {
@@ -672,11 +698,13 @@ fn wallet_argument_derivation_scheme<'a, 'b>() -> Arg<'a, 'b> {
         .possible_values(&["v1", "v2"])
         .default_value("v2")
 }
-fn wallet_argument_derivation_scheme_match<'a>(matches: &ArgMatches<'a>) -> cardano::hdwallet::DerivationScheme {
+fn wallet_argument_derivation_scheme_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> cardano::hdwallet::DerivationScheme {
     match matches.value_of("DERIVATION_SCHEME") {
         Some("v1") => cardano::hdwallet::DerivationScheme::V1,
         Some("v2") => cardano::hdwallet::DerivationScheme::V2,
-        _ => unreachable!() // default is "v2"
+        _ => unreachable!(), // default is "v2"
     }
 }
 fn wallet_argument_mnemonic_size<'a, 'b>() -> Arg<'a, 'b> {
@@ -694,7 +722,7 @@ fn wallet_argument_mnemonic_size_match<'a>(matches: &ArgMatches<'a>) -> cardano:
         Some("18") => cardano::bip::bip39::Type::Type18Words,
         Some("21") => cardano::bip::bip39::Type::Type21Words,
         Some("24") => cardano::bip::bip39::Type::Type24Words,
-        _ => unreachable!() // default is "24"
+        _ => unreachable!(), // default is "24"
     }
 }
 fn wallet_argument_daedalus_seed<'a, 'b>() -> Arg<'a, 'b> {
@@ -707,7 +735,7 @@ fn wallet_argument_daedalus_seed_match<'a>(matches: &ArgMatches<'a>) -> bool {
     matches.is_present("DAEDALUS_SEED")
 }
 
-const WALLET_COMMAND : &'static str = "wallet";
+const WALLET_COMMAND: &'static str = "wallet";
 
 fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     let res = match matches.subcommand() {
@@ -716,7 +744,7 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let wallet_scheme = wallet_argument_wallet_scheme_match(&matches);
             let derivation_scheme = wallet_argument_derivation_scheme_match(&matches);
             let mnemonic_length = wallet_argument_mnemonic_size_match(&matches);
-            let mnemonic_langs  = wallet_argument_mnemonic_languages_match(&matches);
+            let mnemonic_langs = wallet_argument_mnemonic_languages_match(&matches);
 
             wallet::commands::new(
                 &mut term,
@@ -733,8 +761,8 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let mut wallet_scheme = wallet_argument_wallet_scheme_match(&matches);
             let mut derivation_scheme = wallet_argument_derivation_scheme_match(&matches);
             let mut mnemonic_length = wallet_argument_mnemonic_size_match(&matches);
-            let mnemonic_lang   = wallet_argument_mnemonic_language_match(&matches);
-            let daedalus_seed   = wallet_argument_daedalus_seed_match(&matches);
+            let mnemonic_lang = wallet_argument_mnemonic_language_match(&matches);
+            let daedalus_seed = wallet_argument_daedalus_seed_match(&matches);
             let interactive = matches.is_present("RECOVER_INTERACTIVE");
 
             if daedalus_seed {
@@ -742,10 +770,12 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
                     term.warn("Daedalus wallet are usually using `--wallet-scheme=random_index_2levels'\n").unwrap();
                 }
                 if derivation_scheme != cardano::hdwallet::DerivationScheme::V1 {
-                    term.warn("Daedalus wallet are usually using `--derivation-scheme=v1'\n").unwrap();
+                    term.warn("Daedalus wallet are usually using `--derivation-scheme=v1'\n")
+                        .unwrap();
                 }
                 if mnemonic_length != cardano::bip::bip39::Type::Type12Words {
-                    term.warn("Daedalus wallet are usually using `--mnemonics-length=12'\n").unwrap();
+                    term.warn("Daedalus wallet are usually using `--mnemonics-length=12'\n")
+                        .unwrap();
                 }
             }
 
@@ -758,16 +788,18 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
                 mnemonic_length,
                 interactive,
                 daedalus_seed,
-                mnemonic_lang
+                mnemonic_lang,
             )
         }
         ("address", Some(matches)) => {
             let name = wallet_argument_name_match(&matches);
             let account = value_t!(matches, "ACCOUNT_INDEX", u32).unwrap_or_else(|e| e.exit());
-            let index   = value_t!(matches, "ADDRESS_INDEX", u32).unwrap_or_else(|e| e.exit());
+            let index = value_t!(matches, "ADDRESS_INDEX", u32).unwrap_or_else(|e| e.exit());
             let protocol_magic = if matches.is_present("PROTOCOL_MAGIC") {
                 Some(value_t!(matches, "PROTOCOL_MAGIC", u32).unwrap_or_else(|e| e.exit()))
-            } else { None };
+            } else {
+                None
+            };
             let is_internal = matches.is_present("INTERNAL_ADDRESS");
 
             wallet::commands::address(
@@ -777,7 +809,7 @@ fn subcommand_wallet<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
                 protocol_magic,
                 account,
                 is_internal,
-                index
+                index,
             )
         }
         ("attach", Some(matches)) => {
@@ -923,12 +955,26 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
  *             Transaction Sub Commands and helpers                          *
  * ------------------------------------------------------------------------- */
 
-const TRANSACTION_COMMAND : &'static str = "transaction";
+const TRANSACTION_COMMAND: &'static str = "transaction";
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum TransactionCmd {
-    New, List, Destroy, Export, Import, Sign, Finalize, Send,
-    InputSelect, AddChange, AddInput, AddOutput, RmInput, RmOutput, RmChange, Status,
+    New,
+    List,
+    Destroy,
+    Export,
+    Import,
+    Sign,
+    Finalize,
+    Send,
+    InputSelect,
+    AddChange,
+    AddInput,
+    AddOutput,
+    RmInput,
+    RmOutput,
+    RmChange,
+    Status,
 }
 impl TransactionCmd {
     pub fn as_string(self) -> &'static str {
@@ -953,15 +999,15 @@ impl TransactionCmd {
     }
 }
 
-fn transaction_argument_name_definition<'a, 'b>() -> Arg<'a,'b> {
+fn transaction_argument_name_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("TRANSACTION_ID")
         .help("the transaction staging identifier")
         .required(true)
 }
 fn transaction_argument_name_match<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
     match matches.value_of("TRANSACTION_ID") {
-        Some(r) => { r },
-        None => { unreachable!() }
+        Some(r) => r,
+        None => unreachable!(),
     }
 }
 fn transaction_argument_txid_definition<'a, 'b>() -> Arg<'a, 'b> {
@@ -971,42 +1017,56 @@ fn transaction_argument_txid_definition<'a, 'b>() -> Arg<'a, 'b> {
         .requires("TRANSACTION_INDEX")
 }
 fn transaction_argument_index_definition<'a, 'b>() -> Arg<'a, 'b> {
-    Arg::with_name("TRANSACTION_INDEX")
-        .help("The index of the unspent output in the transaction")
+    Arg::with_name("TRANSACTION_INDEX").help("The index of the unspent output in the transaction")
 }
 fn transaction_argument_amount_definition<'a, 'b>() -> Arg<'a, 'b> {
-    Arg::with_name("TRANSACTION_AMOUNT")
-        .help("The value in lovelace")
+    Arg::with_name("TRANSACTION_AMOUNT").help("The value in lovelace")
 }
-fn transaction_argument_txin_match<'a>(matches: &ArgMatches<'a>) -> Option<(cardano::tx::TxId, u32)> {
-    if ! matches.is_present("TRANSACTION_TXID") { return None; }
-    let txid = value_t!(matches, "TRANSACTION_TXID", cardano::tx::TxId).unwrap_or_else(|e| e.exit());
+fn transaction_argument_txin_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> Option<(cardano::tx::TxId, u32)> {
+    if !matches.is_present("TRANSACTION_TXID") {
+        return None;
+    }
+    let txid =
+        value_t!(matches, "TRANSACTION_TXID", cardano::tx::TxId).unwrap_or_else(|e| e.exit());
 
     let index = value_t!(matches, "TRANSACTION_INDEX", u32).unwrap_or_else(|e| e.exit());
 
     Some((txid, index))
 }
-fn transaction_argument_input_match<'a>(matches: &ArgMatches<'a>) -> Option<(cardano::tx::TxId, u32, Option<cardano::coin::Coin>)> {
+fn transaction_argument_input_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> Option<(cardano::tx::TxId, u32, Option<cardano::coin::Coin>)> {
     let (txid, index) = transaction_argument_txin_match(&matches)?;
     let coin = value_t!(matches, "TRANSACTION_AMOUNT", cardano::coin::Coin).ok();
 
     Some((txid, index, coin))
 }
-fn transaction_argument_address_definition<'a, 'b>() -> Arg<'a, 'b>
-{
-    Arg::with_name("TRANSACTION_ADDRESS")
-        .help("Address to send funds too")
+fn transaction_argument_address_definition<'a, 'b>() -> Arg<'a, 'b> {
+    Arg::with_name("TRANSACTION_ADDRESS").help("Address to send funds too")
 }
-fn transaction_argument_output_match<'a>(matches: &ArgMatches<'a>) -> Option<(cardano::address::ExtendedAddr, cardano::coin::Coin)> {
-    if ! matches.is_present("TRANSACTION_ADDRESS") { return None; }
+fn transaction_argument_output_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> Option<(cardano::address::ExtendedAddr, cardano::coin::Coin)> {
+    if !matches.is_present("TRANSACTION_ADDRESS") {
+        return None;
+    }
 
-    let address = value_t!(matches, "TRANSACTION_ADDRESS", cardano::address::ExtendedAddr).unwrap_or_else(|e| e.exit());
-    let coin = value_t!(matches, "TRANSACTION_AMOUNT", cardano::coin::Coin).unwrap_or_else(|e| e.exit());
+    let address = value_t!(
+        matches,
+        "TRANSACTION_ADDRESS",
+        cardano::address::ExtendedAddr
+    )
+    .unwrap_or_else(|e| e.exit());
+    let coin =
+        value_t!(matches, "TRANSACTION_AMOUNT", cardano::coin::Coin).unwrap_or_else(|e| e.exit());
 
     Some((address, coin))
 }
-fn transaction_argument_selection_algorithm_match<'a>(matches: &ArgMatches<'a>) -> ::cardano::wallet::scheme::SelectionPolicy
-{
+fn transaction_argument_selection_algorithm_match<'a>(
+    matches: &ArgMatches<'a>,
+) -> ::cardano::wallet::scheme::SelectionPolicy {
     use cardano::wallet::scheme::SelectionPolicy;
     if matches.is_present("SELECT_HEAD_FIRST") {
         SelectionPolicy::FirstMatchFirst
@@ -1020,16 +1080,13 @@ fn transaction_argument_selection_algorithm_match<'a>(matches: &ArgMatches<'a>) 
     }
 }
 
-
 fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches<'a>) {
     let res = match matches.subcommand() {
         ("new", Some(matches)) => {
             let blockchain = blockchain_argument_name_match(&mut term, &matches);
             transaction::commands::new(&mut term, root_dir, blockchain)
         }
-        ("list", _) => {
-            transaction::commands::list(&mut term, root_dir)
-        }
+        ("list", _) => transaction::commands::list(&mut term, root_dir),
         ("destroy", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
             transaction::commands::destroy(&mut term, root_dir, id)
@@ -1073,20 +1130,33 @@ fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: 
         }
         ("add-change", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr).unwrap_or_else(|e| e.exit());
+            let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr)
+                .unwrap_or_else(|e| e.exit());
 
             transaction::commands::add_change(&mut term, root_dir, id, address)
         }
         ("input-select", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            let wallets = values_t!(matches, "WALLET_NAME", wallet::WalletName).unwrap_or_else(|e| e.exit());
+            let wallets =
+                values_t!(matches, "WALLET_NAME", wallet::WalletName).unwrap_or_else(|e| e.exit());
             let selection_algorithm = transaction_argument_selection_algorithm_match(&matches);
 
-            transaction::commands::input_select(&mut term, root_dir, id, wallets, selection_algorithm)
+            transaction::commands::input_select(
+                &mut term,
+                root_dir,
+                id,
+                wallets,
+                selection_algorithm,
+            )
         }
         ("rm-output", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            let address = value_t!(matches, "TRANSACTION_ADDRESS", cardano::address::ExtendedAddr).ok();
+            let address = value_t!(
+                matches,
+                "TRANSACTION_ADDRESS",
+                cardano::address::ExtendedAddr
+            )
+            .ok();
 
             transaction::commands::remove_output(&mut term, root_dir, id, address)
         }
@@ -1098,7 +1168,8 @@ fn subcommand_transaction<'a>(mut term: term::Term, root_dir: PathBuf, matches: 
         }
         ("rm-change", Some(matches)) => {
             let id = transaction_argument_name_match(&matches);
-            let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr).unwrap_or_else(|e| e.exit());
+            let address = value_t!(matches, "CHANGE_ADDRESS", cardano::address::ExtendedAddr)
+                .unwrap_or_else(|e| e.exit());
 
             transaction::commands::remove_change(&mut term, root_dir, id, address)
         }
@@ -1224,33 +1295,33 @@ fn transaction_commands_definition<'a, 'b>() -> App<'a, 'b> {
  *                Debug Sub Commands and helpers                            *
  * ------------------------------------------------------------------------- */
 
-const DEBUG_COMMAND : &'static str = "debug";
+const DEBUG_COMMAND: &'static str = "debug";
 
 fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMatches<'a>) {
     match matches.subcommand() {
         ("address", Some(matches)) => {
-            let address = value_t!(matches, "ADDRESS", String).unwrap_or_else(|e| e.exit() );
+            let address = value_t!(matches, "ADDRESS", String).unwrap_or_else(|e| e.exit());
 
             debug::command_address(term, address);
-        },
+        }
         ("canonicalize-json", Some(_)) => {
             debug::canonicalize_json();
-        },
+        }
         ("hash", Some(_)) => {
             debug::hash();
-        },
+        }
         ("decode-signed-tx", Some(_)) => {
             debug::decode_signed_tx();
-        },
+        }
         ("generate-xprv", Some(matches)) => {
             let xprv_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
             debug::generate_xprv(xprv_out);
-        },
+        }
         ("xprv-to-xpub", Some(matches)) => {
             let xprv_in = matches.value_of("INPUT_FILE").expect("INPUT_FILE");
             let xpub_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
             debug::xprv_to_xpub(xprv_in, xpub_out);
-        },
+        }
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)

@@ -1,22 +1,25 @@
 use super::config::{encrypt_primary_key, Config, HDWalletModel};
-use super::{WalletName, Wallet, Wallets};
 use super::error::{Error, Result};
-use super::state::{lookup};
-use super::utils::{*};
+use super::state::lookup;
+use super::utils::*;
+use super::{Wallet, WalletName, Wallets};
 
-use std::{path::PathBuf, io::Write};
-use cardano::{hdwallet::{self, DerivationScheme}, wallet, bip::bip39};
+use cardano::{
+    bip::bip39,
+    hdwallet::{self, DerivationScheme},
+    wallet,
+};
 use rand::random;
+use std::{io::Write, path::PathBuf};
 
-use utils::{term::{Term, style::{Style}}, prompt};
+use utils::{
+    prompt,
+    term::{style::Style, Term},
+};
 
 use blockchain::{Blockchain, BlockchainName};
 
-pub fn list(
-    term: &mut Term,
-    root_dir: PathBuf,
-    detailed: bool,
-) -> Result<()> {
+pub fn list(term: &mut Term, root_dir: PathBuf, detailed: bool) -> Result<()> {
     let wallets = Wallets::load(root_dir.clone())?;
     for (_, wallet) in wallets {
         let detail = if detailed {
@@ -29,7 +32,8 @@ pub fn list(
 
                 let total = state.total()?;
 
-                format!("\t{}\t{}@{}",
+                format!(
+                    "\t{}\t{}@{}",
                     style!(total).green().bold(),
                     style!(blk_name).underlined().white(),
                     style!(state.ptr.latest_block_date())
@@ -63,7 +67,7 @@ where
     let config = Config {
         attached_blockchain: None,
         derivation_scheme: derivation_scheme,
-        hdwallet_model: wallet_scheme
+        hdwallet_model: wallet_scheme,
     };
 
     // 1. generate the mnemonics
@@ -72,8 +76,14 @@ where
     // 2. perform the seed generation from the entropy
 
     term.info("You can add a recovery wallet password. You can set no password, however you won't benefit from plausible deniability\n").unwrap();
-    let recovery_password = term.new_password("recovery password", "confirm password", "password mismatch ").unwrap();
-    let mut seed = [0;hdwallet::XPRV_SIZE];
+    let recovery_password = term
+        .new_password(
+            "recovery password",
+            "confirm password",
+            "password mismatch ",
+        )
+        .unwrap();
+    let mut seed = [0; hdwallet::XPRV_SIZE];
     wallet::keygen::generate_seed(&entropy, recovery_password.as_bytes(), &mut seed);
 
     term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n").unwrap();
@@ -95,7 +105,13 @@ where
 
     // 4. encrypt the private key
     term.info("Set a wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n").unwrap();
-    let password = term.new_password("spending password", "confirm spending password", "password mismatch").unwrap();
+    let password = term
+        .new_password(
+            "spending password",
+            "confirm spending password",
+            "password mismatch",
+        )
+        .unwrap();
     let encrypted_xprv = encrypt_primary_key(password.as_bytes(), &xprv);
 
     // 5. create the wallet
@@ -104,7 +120,11 @@ where
     // 6. save the wallet
     wallet.save()?;
 
-    term.success(&format!("wallet `{}' successfully created.\n", &wallet.name)).unwrap();
+    term.success(&format!(
+        "wallet `{}' successfully created.\n",
+        &wallet.name
+    ))
+    .unwrap();
 
     Ok(())
 }
@@ -126,7 +146,7 @@ where
     let config = Config {
         attached_blockchain: None,
         derivation_scheme: derivation_scheme,
-        hdwallet_model: wallet_scheme
+        hdwallet_model: wallet_scheme,
     };
 
     // 1. generate the mnemonics
@@ -151,10 +171,13 @@ where
             }
         }
     } else {
-        term.info("Enter the wallet recovery password (if the password is wrong, you won't know).\n").unwrap();
+        term.info(
+            "Enter the wallet recovery password (if the password is wrong, you won't know).\n",
+        )
+        .unwrap();
         let recovery_password = term.password("recovery password: ").unwrap();
 
-        let mut seed = [0;hdwallet::XPRV_SIZE];
+        let mut seed = [0; hdwallet::XPRV_SIZE];
         wallet::keygen::generate_seed(&entropy, recovery_password.as_bytes(), &mut seed);
 
         // normalize the seed to make it a valid private key
@@ -169,7 +192,13 @@ where
 
     // 4. encrypt the private key
     term.info("Set a wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n").unwrap();
-    let password = term.new_password("spending password", "confirm spending password", "password mismatch").unwrap();
+    let password = term
+        .new_password(
+            "spending password",
+            "confirm spending password",
+            "password mismatch",
+        )
+        .unwrap();
     let encrypted_xprv = encrypt_primary_key(password.as_bytes(), &xprv);
 
     // 5. create the wallet
@@ -178,7 +207,11 @@ where
     // 6. save the wallet
     wallet.save()?;
 
-    term.success(&format!("wallet `{}' successfully recovered.\n", &wallet.name)).unwrap();
+    term.success(&format!(
+        "wallet `{}' successfully recovered.\n",
+        &wallet.name
+    ))
+    .unwrap();
 
     Ok(())
 }
@@ -188,31 +221,36 @@ where
 /// **Caveat:** the files in storage are only unlinked on the filesystem
 /// level, the data on the physical medium are not erased.
 ///
-pub fn destroy(
-    term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-) -> Result<()> {
+pub fn destroy(term: &mut Term, root_dir: PathBuf, name: WalletName) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(&root_dir, name)?;
 
-    writeln!(term, "You are about to destroy your wallet {}.
+    writeln!(
+        term,
+        "You are about to destroy your wallet {}.
 This means that all the data associated to this wallet will be deleted on this device.
 The only way you will be able to reuse the wallet, recover the funds and create
 new transactions will be by recovering the wallet with the mnemonic words.",
         ::console::style(&wallet.name).bold().red(),
-    ).unwrap();
+    )
+    .unwrap();
 
     // FIXME: create a confirmation API that is exposed on the command
     // methods that need to put the user through a confirmation dialog.
     // See issue #45
 
-    let confirmation = ::dialoguer::Confirmation::new().with_text("Are you sure?")
+    let confirmation = ::dialoguer::Confirmation::new()
+        .with_text("Are you sure?")
         .default(false)
-        .interact().unwrap();
-    if ! confirmation { ::std::process::exit(0); }
+        .interact()
+        .unwrap();
+    if !confirmation {
+        ::std::process::exit(0);
+    }
 
-    wallet.destroy().map_err(|e| Error::WalletDestroyFailed(e))?;
+    wallet
+        .destroy()
+        .map_err(|e| Error::WalletDestroyFailed(e))?;
 
     term.success("Wallet successfully destroyed.\n").unwrap();
 
@@ -223,7 +261,7 @@ pub fn attach(
     term: &mut Term,
     root_dir: PathBuf,
     name: WalletName,
-    blockchain_name: BlockchainName
+    blockchain_name: BlockchainName,
 ) -> Result<()> {
     // load the wallet
     let mut wallet = Wallet::load(&root_dir, name)?;
@@ -240,24 +278,18 @@ pub fn attach(
     wallet.config.attached_blockchain = Some(blockchain_name.as_ref().to_owned());
     wallet.save()?;
 
-    term.success("Wallet successfully attached to blockchain.\n").unwrap();
+    term.success("Wallet successfully attached to blockchain.\n")
+        .unwrap();
 
     Ok(())
 }
 
-pub fn detach(
-    term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-) -> Result<()> {
+pub fn detach(term: &mut Term, root_dir: PathBuf, name: WalletName) -> Result<()> {
     // load the wallet
     let mut wallet = Wallet::load(&root_dir, name)?;
 
     // 1. get the wallet's blockchain
-    let _ = load_attached_blockchain(
-        &root_dir,
-        &wallet.config,
-    )?;
+    let _ = load_attached_blockchain(&root_dir, &wallet.config)?;
 
     // 2. delete the wallet log
     wallet.delete_log()?;
@@ -266,16 +298,13 @@ pub fn detach(
 
     wallet.save()?;
 
-    term.success("Wallet successfully detached from blockchain.\n").unwrap();
+    term.success("Wallet successfully detached from blockchain.\n")
+        .unwrap();
 
     Ok(())
 }
 
-pub fn status(
-    term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-) -> Result<()> {
+pub fn status(term: &mut Term, root_dir: PathBuf, name: WalletName) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
@@ -286,23 +315,22 @@ pub fn status(
         term.info(blk_name).unwrap();
         term.simply("\n").unwrap();
     } else {
-        term.info(&format!("Wallet {} status\n", &wallet.name)).unwrap();
+        term.info(&format!("Wallet {} status\n", &wallet.name))
+            .unwrap();
         term.warn("wallet not attached to a blockchain\n").unwrap();
         return Ok(());
     }
 
     term.simply(" * wallet model ").unwrap();
-    term.warn(&format!("{:?}", &wallet.config.hdwallet_model)).unwrap();
+    term.warn(&format!("{:?}", &wallet.config.hdwallet_model))
+        .unwrap();
     term.simply("\n").unwrap();
     term.simply(" * derivation scheme ").unwrap();
-    term.warn(&format!("{:?}", &wallet.config.derivation_scheme)).unwrap();
+    term.warn(&format!("{:?}", &wallet.config.derivation_scheme))
+        .unwrap();
     term.simply("\n").unwrap();
 
-    let state = create_wallet_state_from_logs(
-        &wallet,
-        root_dir,
-        lookup::accum::Accum::default(),
-    )?;
+    let state = create_wallet_state_from_logs(&wallet, root_dir, lookup::accum::Accum::default())?;
 
     let total = state.total()?;
 
@@ -314,9 +342,9 @@ pub fn status(
             term.simply(" * synced to block ").unwrap();
             term.warn(&format!(
                 " {} ({})",
-                state.ptr.latest_known_hash,
-                latest_addr,
-            )).unwrap();
+                state.ptr.latest_known_hash, latest_addr,
+            ))
+            .unwrap();
         }
         None => {
             term.simply(" * ").unwrap();
@@ -328,47 +356,30 @@ pub fn status(
     Ok(())
 }
 
-pub fn log(term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-    pretty: bool,
-) -> Result<()> {
+pub fn log(term: &mut Term, root_dir: PathBuf, name: WalletName, pretty: bool) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let mut state = create_wallet_state_from_logs(
-        &wallet,
-        &root_dir,
-        lookup::accum::Accum::default(),
-    )?;
+    let mut state =
+        create_wallet_state_from_logs(&wallet, &root_dir, lookup::accum::Accum::default())?;
 
     display_wallet_state_logs(term, &wallet, &mut state, pretty);
 
     Ok(())
 }
 
-pub fn utxos(term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-) -> Result<()> {
+pub fn utxos(term: &mut Term, root_dir: PathBuf, name: WalletName) -> Result<()> {
     // load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
-    let state = create_wallet_state_from_logs(
-        &wallet,
-        &root_dir,
-        lookup::accum::Accum::default(),
-    )?;
+    let state = create_wallet_state_from_logs(&wallet, &root_dir, lookup::accum::Accum::default())?;
 
     display_wallet_state_utxos(term, state);
 
     Ok(())
 }
 
-pub fn sync(term: &mut Term,
-    root_dir: PathBuf,
-    name: WalletName,
-) -> Result<()> {
+pub fn sync(term: &mut Term, root_dir: PathBuf, name: WalletName) -> Result<()> {
     // 0. load the wallet
     let wallet = Wallet::load(root_dir.clone(), name)?;
 
@@ -377,27 +388,24 @@ pub fn sync(term: &mut Term,
 
     match wallet.config.hdwallet_model {
         HDWalletModel::BIP44 => {
-            let mut lookup_struct = load_bip44_lookup_structure(term, blockchain.config.protocol_magic.into(), &wallet);
+            let mut lookup_struct =
+                load_bip44_lookup_structure(term, blockchain.config.protocol_magic.into(), &wallet);
             lookup_struct.prepare_next_account()?;
 
-            let mut state = create_wallet_state_from_logs(
-                &wallet,
-                &root_dir,
-                lookup_struct,
-            )?;
+            let mut state = create_wallet_state_from_logs(&wallet, &root_dir, lookup_struct)?;
 
             update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
-        },
+        }
         HDWalletModel::RandomIndex2Levels => {
-            let lookup_struct = load_randomindex_lookup_structure(term, blockchain.config.protocol_magic.into(), &wallet);
-            let mut state = create_wallet_state_from_logs(
+            let lookup_struct = load_randomindex_lookup_structure(
+                term,
+                blockchain.config.protocol_magic.into(),
                 &wallet,
-                &root_dir,
-                lookup_struct,
-            )?;
+            );
+            let mut state = create_wallet_state_from_logs(&wallet, &root_dir, lookup_struct)?;
 
             update_wallet_state_with_utxos(term, &wallet, &blockchain, &mut state);
-        },
+        }
     };
 
     Ok(())
@@ -433,7 +441,7 @@ pub fn address(
             };
             let addressing = change.index(index)?;
             lookup_struct.get_address(&addressing)
-        },
+        }
         HDWalletModel::RandomIndex2Levels => {
             let lookup_struct = load_randomindex_lookup_structure(term, protocol_magic, &wallet);
             let addressing = ::cardano::wallet::rindex::Addressing::new(account, index);

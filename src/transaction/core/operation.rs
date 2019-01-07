@@ -1,20 +1,23 @@
-use cardano::{tx::{TxId, TxOut, TxoPointer, TxInWitness}, coin::{Coin}, address::{ExtendedAddr}};
+use cardano::{
+    address::ExtendedAddr,
+    coin::Coin,
+    tx::{TxId, TxInWitness, TxOut, TxoPointer},
+};
 use serde_yaml;
-use std::{fmt, error};
+use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum ParsingOperationError {
-    Yaml(String)
+    Yaml(String),
 }
 impl fmt::Display for ParsingOperationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParsingOperationError::Yaml(err) => write!(f, "{}", err)
+            ParsingOperationError::Yaml(err) => write!(f, "{}", err),
         }
     }
 }
-impl error::Error for ParsingOperationError {
-}
+impl error::Error for ParsingOperationError {}
 
 /// here are the operations that we will record in staging transactions.
 ///
@@ -53,7 +56,7 @@ pub enum Operation {
     Signature(TxInWitness),
 
     /// operation to finalize a transaction
-    Finalize
+    Finalize,
 }
 impl Operation {
     // For now, Operation will be serialized in YAML (thanks to serde).
@@ -61,7 +64,6 @@ impl Operation {
     // This will make parsing the data easier (we don't have to code any
     // custom format) and the debugging of the data too (we can open the file
     // and check what is being written)
-
 
     /// serialization of the operation within the transaction
     ///
@@ -72,9 +74,8 @@ impl Operation {
 
     /// deserialization of the operation within the transaction
     pub fn deserialize(bytes: &[u8]) -> Result<Self, ParsingOperationError> {
-        serde_yaml::from_slice(bytes).map_err(|e|
-            ParsingOperationError::Yaml(format!("operation format error: {:?}", e))
-        )
+        serde_yaml::from_slice(bytes)
+            .map_err(|e| ParsingOperationError::Yaml(format!("operation format error: {:?}", e)))
     }
 }
 
@@ -97,7 +98,7 @@ pub struct Input {
     pub index_in_transaction: u32,
 
     /// the expected amount to spend
-    pub expected_value: Coin
+    pub expected_value: Coin,
 }
 impl Input {
     /// collect the transaction input. By design this `TxIn` represents
@@ -106,7 +107,7 @@ impl Input {
     pub fn extract_txin(&self) -> TxoPointer {
         TxoPointer {
             id: self.transaction_id,
-            index: self.index_in_transaction
+            index: self.index_in_transaction,
         }
     }
 }
@@ -120,13 +121,13 @@ pub struct Output {
     pub address: ExtendedAddr,
 
     /// The desired amount to send to the associated address
-    pub amount: Coin
+    pub amount: Coin,
 }
 impl From<Output> for TxOut {
     fn from(o: Output) -> Self {
         TxOut {
             address: o.address,
-            value: o.amount
+            value: o.amount,
         }
     }
 }
@@ -134,7 +135,7 @@ impl<'a> From<&'a Output> for TxOut {
     fn from(o: &'a Output) -> Self {
         TxOut {
             address: o.address.clone(),
-            value: o.amount
+            value: o.amount,
         }
     }
 }
