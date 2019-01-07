@@ -57,7 +57,7 @@ impl StagingTransaction {
         w.append_bytes(MAGIC_TRANSACTION_V1)?;
         {
             let mut bytes = Vec::with_capacity(4);
-            serialize::utils::write_u32(&mut bytes, *protocol_magic)?;
+            serialize::io::write_u32(&mut bytes, *protocol_magic)?;
             w.append_bytes(&bytes)?;
         }
         Ok(StagingTransaction {
@@ -169,7 +169,7 @@ impl StagingTransaction {
         let protocol_magic = match protocol_magic {
             None => return Err(StagingTransactionParseError::MissingProtocolMagic),
             Some(protocol_magic) => {
-                ProtocolMagic::from(serialize::utils::read_u32(&mut protocol_magic.as_slice())?)
+                ProtocolMagic::from(serialize::io::read_u32(&mut protocol_magic.as_slice())?)
             }
         };
 

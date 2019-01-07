@@ -95,29 +95,29 @@ impl<A: serde::Serialize> Log<A> {
         writer.write_all(ptr.latest_known_hash.as_ref())?;
         match date {
             BlockDate::Boundary(i) => {
-                serialize::utils::write_u64(&mut writer, i as u64)?;
-                serialize::utils::write_u64(&mut writer, u64::max_value())?;
+                serialize::io::write_u64(&mut writer, i as u64)?;
+                serialize::io::write_u64(&mut writer, u64::max_value())?;
             }
             BlockDate::Normal(i) => {
-                serialize::utils::write_u64(&mut writer, i.epoch as u64)?;
-                serialize::utils::write_u64(&mut writer, i.slotid as u64)?;
+                serialize::io::write_u64(&mut writer, i.epoch as u64)?;
+                serialize::io::write_u64(&mut writer, i.slotid as u64)?;
             }
         }
 
         match self {
             Log::Checkpoint(_) => {
-                serialize::utils::write_u32(&mut writer, 1)?;
-                serialize::utils::write_u64(&mut writer, 0)?;
+                serialize::io::write_u32(&mut writer, 1)?;
+                serialize::io::write_u64(&mut writer, 0)?;
             }
             Log::ReceivedFund(_, utxo) => {
-                serialize::utils::write_u32(&mut writer, 2)?;
-                serialize::utils::write_u64(&mut writer, 0)?;
+                serialize::io::write_u32(&mut writer, 2)?;
+                serialize::io::write_u64(&mut writer, 0)?;
                 serde_yaml::to_writer(&mut writer, utxo)
                     .map_err(|e| Error::LogFormatError(format!("log format error: {:?}", e)))?;
             }
             Log::SpentFund(_, utxo) => {
-                serialize::utils::write_u32(&mut writer, 3)?;
-                serialize::utils::write_u64(&mut writer, 0)?;
+                serialize::io::write_u32(&mut writer, 3)?;
+                serialize::io::write_u64(&mut writer, 0)?;
                 serde_yaml::to_writer(&mut writer, utxo)
                     .map_err(|e| Error::LogFormatError(format!("log format error: {:?}", e)))?;
             }
@@ -144,8 +144,8 @@ where
         let ptr = {
             let mut hash = [0; 32];
             reader.read_exact(&mut hash)?;
-            let gen = serialize::utils::read_u64(&mut reader)?;
-            let slot = serialize::utils::read_u64(&mut reader)?;
+            let gen = serialize::io::read_u64(&mut reader)?;
+            let slot = serialize::io::read_u64(&mut reader)?;
 
             let hh = HeaderHash::from(hash);
             let bd = if slot == 0xFFFFFFFFFFFFFFFF {
@@ -161,8 +161,8 @@ where
         };
 
         let t = {
-            let t = serialize::utils::read_u32(&mut reader)?;
-            let b = serialize::utils::read_u64(&mut reader)?;
+            let t = serialize::io::read_u32(&mut reader)?;
+            let b = serialize::io::read_u64(&mut reader)?;
             debug_assert!(b == 0u64);
             t
         };
