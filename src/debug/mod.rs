@@ -76,7 +76,7 @@ pub fn decode_signed_tx() {
         .expect("Cannot read stdin.");
 
     let bytes = base64::decode(&data).unwrap();
-    let txaux: cardano::tx::TxAux = cbor_event::de::RawCbor::from(&bytes)
+    let txaux: cardano::tx::TxAux = cbor_event::de::Deserializer::from(std::io::Cursor::new(bytes))
         .deserialize_complete()
         .unwrap();
 
