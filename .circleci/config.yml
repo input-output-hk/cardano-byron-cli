@@ -27,6 +27,8 @@ jobs:
     working_directory: /mnt/crate
     steps:
     - checkout
+    - run: git submodule init
+    - run: git submodule update
     - attach_workspace:
         at: .
     - restore_cache:
