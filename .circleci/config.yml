@@ -50,10 +50,6 @@ jobs:
         command: cargo test --verbose --frozen 
         environment:
           RUSTFLAGS: -C link-dead-code
-    - persist_to_workspace:
-        root: .
-        paths:
-        - target/debug/*
   test_release:
     docker:
     - image: rust:latest
@@ -76,10 +72,6 @@ jobs:
     - run:
         name: Build and test in release profile
         command: cargo test --verbose --frozen --release
-    - persist_to_workspace:
-        root: .
-        paths:
-        - target/debug/* 
   coverage:
     docker:
     - image: ragnaroek/kcov:v33
