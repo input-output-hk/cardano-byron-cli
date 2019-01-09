@@ -17,9 +17,6 @@ jobs:
         - cargo-v1-
     - run: cargo update
     - run: cargo fetch
-    - run: 
-        name: "Install test infra dependancies" 
-        command: cargo install cargo-junit
     - persist_to_workspace:
         root: .
         paths:
@@ -29,7 +26,6 @@ jobs:
         paths:
         - /usr/local/cargo/registry
         - /usr/local/cargo/git
-        - /usr/local/cargo/bin
   test:
     docker:
     - image: rust:latest
@@ -47,14 +43,11 @@ jobs:
         keys:
         - cargo-v1-{{ checksum "Cargo.toml" }}-{{ checksum "Cargo.lock" }}
     - run:
-        name: create test-results directory
-        command: mkdir -p ~/test-results/${CIRCLE_JOB}
-    - run:
         name: Print version information
         command: rustc --version; cargo --version
     - run:
         name: Build and test
-        command: cargo junit --verbose --frozen --name ~/test-results/${CIRCLE_JOB}/results.xml
+        command: cargo test --verbose --frozen 
         environment:
           RUSTFLAGS: -C link-dead-code
     - run:  
@@ -63,11 +56,6 @@ jobs:
           for file in target/debug/* target/debug/.??*; do
             [ -d $file -o ! -x $file ] && rm -r $file
           done
-    - store_test_results:
-        path: ~/test-results
-    - store_artifacts:
-        path: ~/test-results
-        destination: test_results
     - persist_to_workspace:
         root: .
         paths:
@@ -89,25 +77,17 @@ jobs:
         keys:
         - cargo-v1-{{ checksum "Cargo.toml" }}-{{ checksum "Cargo.lock" }}
     - run:
-        name: create test-results directory
-        command: mkdir -p ~/test-results/${CIRCLE_JOB}
-    - run:
         name: Print version information
         command: rustc --version; cargo --version
     - run:
         name: Build and test in release profile
-        command: cargo junit --verbose --frozen --release --name ~/test-results/${CIRCLE_JOB}/results.xml
+        command: cargo test --verbose --frozen --release
     - run:
         name: Prune the output files
         command: |
           for file in target/debug/* target/debug/.??*; do
             [ -d $file -o ! -x $file ] && rm -r $file
           done
-    - store_test_results:
-        path: ~/test-results
-    - store_artifacts:
-        path: ~/test-results
-        destination: test_results
     - persist_to_workspace:
         root: .
         paths:
