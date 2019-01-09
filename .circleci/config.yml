@@ -17,6 +17,7 @@ jobs:
         - cargo-v1-
     - run: cargo update
     - run: cargo fetch
+    - run: cargo install cargo-junit
     - persist_to_workspace:
         root: .
         paths:
@@ -47,7 +48,7 @@ jobs:
         command: rustc --version; cargo --version
     - run:
         name: Build and test
-        command: cargo test --verbose --frozen
+        command: command: cargo junit --verbose --frozen --name ~/test-results/${CIRCLE_JOB}/results.xml
         environment:
           RUSTFLAGS: -C link-dead-code
     - run:
@@ -56,6 +57,11 @@ jobs:
           for file in target/debug/* target/debug/.??*; do
             [ -d $file -o ! -x $file ] && rm -r $file
           done
+    - store_test_results:
+        path: ~/test-results
+    - store_artifacts:
+        path: ~/test-results
+        destination: test_results
     - persist_to_workspace:
         root: .
         paths:
@@ -81,7 +87,22 @@ jobs:
         command: rustc --version; cargo --version
     - run:
         name: Build and test in release profile
-        command: cargo test --verbose --frozen --release
+        command: cargo junit --verbose --frozen --release --name ~/test-results/${CIRCLE_JOB}/results.xml
+    - run:
+        name: Prune the output files
+        command: |
+          for file in target/debug/* target/debug/.??*; do
+            [ -d $file -o ! -x $file ] && rm -r $file
+          done
+    - store_test_results:
+        path: ~/test-results
+    - store_artifacts:
+        path: ~/test-results
+        destination: test_results
+    - persist_to_workspace:
+        root: .
+        paths:
+        - target/debug/* 
   coverage:
     docker:
     - image: ragnaroek/kcov:v33
