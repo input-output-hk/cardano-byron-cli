@@ -50,12 +50,6 @@ jobs:
         command: cargo test --verbose --frozen 
         environment:
           RUSTFLAGS: -C link-dead-code
-    - run:  
-        name: Prune the output files
-        command: |
-          for file in target/debug/* target/debug/.??*; do
-            [ -d $file -o ! -x $file ] && rm -r $file
-          done
     - persist_to_workspace:
         root: .
         paths:
@@ -82,12 +76,6 @@ jobs:
     - run:
         name: Build and test in release profile
         command: cargo test --verbose --frozen --release
-    - run:
-        name: Prune the output files
-        command: |
-          for file in target/debug/* target/debug/.??*; do
-            [ -d $file -o ! -x $file ] && rm -r $file
-          done
     - persist_to_workspace:
         root: .
         paths:
