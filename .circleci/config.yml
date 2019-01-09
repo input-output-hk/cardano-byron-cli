@@ -6,8 +6,11 @@ jobs:
     working_directory: /mnt/crate
     steps:
     - checkout
-    - run: git submodule init
-    - run: git submodule update
+    - run: 
+      name: "Pull Submodules"
+      command: |
+        git submodule init
+        git submodule update --remote
     - restore_cache:
         keys:
         - cargo-v1-{{ checksum "Cargo.toml" }}-
@@ -29,8 +32,11 @@ jobs:
     working_directory: /mnt/crate
     steps:
     - checkout
-    - run: git submodule init
-    - run: git submodule update
+    - run: 
+      name: "Submodules"
+      command: |
+        git submodule init
+        git submodule update --remote
     - attach_workspace:
         at: .
     - restore_cache:
@@ -60,8 +66,11 @@ jobs:
     working_directory: /mnt/crate
     steps:
     - checkout
-    - run: git submodule init
-    - run: git submodule update
+    - run: 
+      name: "Submodules"
+      command: |
+        git submodule init
+        git submodule update --remote
     - attach_workspace:
         at: .
     - restore_cache:
@@ -79,9 +88,12 @@ jobs:
       entrypoint: /bin/bash
     working_directory: /mnt/crate
     steps:
-    - checkout
-    - run: git submodule init
-    - run: git submodule update
+    - checkout    
+    - run: 
+      name: "Submodules"
+      command: |
+        git submodule init
+        git submodule update --remote
     - attach_workspace:
         at: .
     - run: mkdir target/coverage
