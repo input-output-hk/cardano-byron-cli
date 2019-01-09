@@ -17,7 +17,9 @@ jobs:
         - cargo-v1-
     - run: cargo update
     - run: cargo fetch
-    - run: cargo install cargo-junit
+    - run: 
+        name: "Install test infra dependancies" 
+        command: cargo install cargo-junit
     - persist_to_workspace:
         root: .
         paths:
