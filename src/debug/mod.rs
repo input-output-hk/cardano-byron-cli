@@ -125,24 +125,43 @@ pub fn generate_xprv(output_prv: &str) {
     file.write_all(s.as_ref()).unwrap();
 }
 
-pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
-    let xprv = {
-        let mut infile = ::std::fs::OpenOptions::new()
-            .read(true)
-            .open(input_priv)
-            .unwrap();
-        let mut v = Vec::new();
-        infile.read_to_end(&mut v).unwrap();
-        let s = String::from_utf8(v).unwrap();
-        let i = hex::decode(&s).unwrap();
-        if i.len() != hdwallet::XPRV_SIZE {
-            panic!("not containing an XPRV")
-        }
+fn open_xpriv(input_priv: &str) -> hdwallet::XPrv {
+    use std::str::FromStr;
+    let mut infile = ::std::fs::OpenOptions::new()
+        .read(true)
+        .open(input_priv)
+        .unwrap();
+    let mut v = Vec::new();
+    infile.read_to_end(&mut v).unwrap();
+    let s = String::from_utf8(v).unwrap();
+    hdwallet::XPrv::from_str(&s).unwrap()
+}
 
-        let mut xprv_data = [0u8; hdwallet::XPRV_SIZE];
-        xprv_data.copy_from_slice(&i[..]);
-        hdwallet::XPrv::from_bytes_verified(xprv_data).unwrap()
-    };
+fn open_xpub(input_pub: &str) -> hdwallet::XPub {
+    use std::str::FromStr;
+    let mut infile = ::std::fs::OpenOptions::new()
+        .read(true)
+        .open(input_pub)
+        .unwrap();
+    let mut v = Vec::new();
+    infile.read_to_end(&mut v).unwrap();
+    let s = String::from_utf8(v).unwrap();
+    hdwallet::XPub::from_str(&s).unwrap()
+}
+
+fn open_signature(input_sign: &str) -> hdwallet::Signature<Vec<u8>> {
+    let mut infile = ::std::fs::OpenOptions::new()
+        .read(true)
+        .open(input_sign)
+        .unwrap();
+    let mut v = Vec::new();
+    infile.read_to_end(&mut v).unwrap();
+    let s = String::from_utf8(v).unwrap();
+    hdwallet::Signature::from_hex(&s).unwrap()
+}
+
+pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
+    let xprv = open_xpriv(input_priv);
     let xpub = xprv.public();
     let s = hex::encode(xpub.as_ref());
     let mut file = ::std::fs::OpenOptions::new()
@@ -152,4 +171,40 @@ pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
         .unwrap();
     file.write_all(s.as_ref()).unwrap();
     ()
+}
+
+pub fn sign_with_xprv(input_priv: &str, input_to_sign: &str, output_sign: &str) {
+    let xprv = open_xpriv(input_priv);
+    let mut to_sign = Vec::new();
+    let mut infile = ::std::fs::OpenOptions::new()
+        .read(true)
+        .open(input_to_sign)
+        .unwrap();
+    infile.read_to_end(&mut to_sign).unwrap();
+    let signature: hdwallet::Signature<Vec<u8>> = xprv.sign(&to_sign);
+
+    let s = hex::encode(signature.as_ref());
+    let mut file = ::std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(output_sign)
+        .unwrap();
+    file.write_all(s.as_ref()).unwrap();
+}
+
+pub fn verify_with_xpub(input_pub: &str, input_to_verify: &str, input_sign: &str) {
+    let xpub = open_xpub(input_pub);
+    let signature = open_signature(input_sign);
+    let mut to_verify = Vec::new();
+    let mut infile = ::std::fs::OpenOptions::new()
+        .read(true)
+        .open(input_to_verify)
+        .unwrap();
+    infile.read_to_end(&mut to_verify).unwrap();
+    if xpub.verify(&to_verify, &signature) {
+        println!("signature verification succeed");
+    } else {
+        println!("signature verification failed");
+        ::std::process::exit(1);
+    }
 }

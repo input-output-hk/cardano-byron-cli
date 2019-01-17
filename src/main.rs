@@ -1322,6 +1322,18 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
             let xpub_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
             debug::xprv_to_xpub(xprv_in, xpub_out);
         }
+        ("xprv-sign", Some(matches)) => {
+            let xprv_in = matches.value_of("XPRV_FILE").expect("XPRV_FILE");
+            let data_in = matches.value_of("INPUT_FILE").expect("INPUT_FILE");
+            let sign_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
+            debug::sign_with_xprv(xprv_in, data_in, sign_out);
+        }
+        ("xpub-verify", Some(matches)) => {
+            let xpub_in = matches.value_of("XPUB_FILE").expect("XPUB_FILE");
+            let data_in = matches.value_of("INPUT_FILE").expect("INPUT_FILE");
+            let sign_in = matches.value_of("SIGNATURE_FILE").expect("SIGNATURE_FILE");
+            debug::verify_with_xpub(xpub_in, data_in, sign_in);
+        }
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -1363,6 +1375,42 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .about("generate a random valid XPrv")
             .arg(Arg::with_name("OUTPUT_FILE")
                 .help("the path to output a brand new xprv")
+                .value_name("FILE")
+                .required(true)
+            )
+        )
+        .subcommand(SubCommand::with_name("xprv-sign")
+            .about("Sign document with the given extended private key -- see generate-xprv")
+            .arg(Arg::with_name("XPRV_FILE")
+                .help("the path of a file containing an xprv")
+                .value_name("FILE")
+                .required(true)
+            )
+            .arg(Arg::with_name("INPUT_FILE")
+                .help("the path of the data to sign")
+                .value_name("FILE")
+                .required(true)
+            )
+            .arg(Arg::with_name("OUTPUT_FILE")
+                .help("the path to output the signature")
+                .value_name("FILE")
+                .required(true)
+            )
+        )
+        .subcommand(SubCommand::with_name("xpub-verify")
+            .about("Verify the signature of a document with the given extended public key -- see xprv-to-xpub")
+            .arg(Arg::with_name("XPUB_FILE")
+                .help("the path of a file containing an xpub")
+                .value_name("FILE")
+                .required(true)
+            )
+            .arg(Arg::with_name("INPUT_FILE")
+                .help("the path of the data to verify the signature from")
+                .value_name("FILE")
+                .required(true)
+            )
+            .arg(Arg::with_name("SIGNATURE_FILE")
+                .help("the path of the signature")
                 .value_name("FILE")
                 .required(true)
             )
