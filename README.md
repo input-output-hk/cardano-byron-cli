@@ -33,7 +33,7 @@ This command line interface is built upon the
 While it is recommended to wait for official releases, it is also possible
 to build the executable yourself by following these steps:
 
-1. [install rust toolchain](;https://www.rust-lang.org/en-US/install.html);
+1. [install rust toolchain](https://www.rust-lang.org/en-US/install.html);
 2. clone the project repository (with the dependencies)
    ```sh
    git clone https://github.com/input-output-hk/cardano-cli.git --recursive
