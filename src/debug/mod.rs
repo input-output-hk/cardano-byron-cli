@@ -4,7 +4,7 @@ use cardano::{
     hash,
     util::{base58, hex, try_from_slice::TryFromSlice},
 };
-use exe_common::parse_genesis_data;
+use exe_common::genesisdata;
 use rand;
 use std::io::{self, Read, Write};
 use utils::term::{emoji, style::Style, Term};
@@ -57,7 +57,7 @@ pub fn canonicalize_json() {
     io::stdin()
         .read_to_string(&mut json)
         .expect("Cannot read stdin.");
-    print!("{}", parse_genesis_data::canonicalize_json(json.as_bytes()));
+    print!("{}", genesisdata::parse::canonicalize_json(json.as_bytes()));
 }
 
 /// Compute the Blake2b256 hash of the data on stdin.

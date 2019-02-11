@@ -18,7 +18,7 @@ use cardano_storage::{self as storage, config::StorageConfig, tag, Storage};
 use exe_common::network::api::BlockRef;
 pub use exe_common::{
     config::net::{self, Config, Peer, Peers},
-    genesis_data, network, parse_genesis_data,
+    genesis_data, genesisdata, network,
 };
 use storage_units::utils::directory_name::{DirectoryName, DirectoryNameError};
 
@@ -126,7 +126,7 @@ impl Blockchain {
         let path = self.dir.join("genesis.json");
         let fs = OpenOptions::new().read(true).open(path)?;
 
-        let genesis_data = parse_genesis_data::parse_genesis_data(fs);
+        let genesis_data = genesisdata::parse::parse(fs);
 
         Ok(genesis_data)
     }
