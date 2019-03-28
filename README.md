@@ -20,7 +20,7 @@ This command line interface is built upon the
 * The software is currently still in alpha phase, please do not use for
   any other purpose than debugging and testing, until stable releases are available.
 * While most of the operations in the CLI is in a reading state, and are thus
-  relatively safe even in the precense of bugs, do take special note that
+  relatively safe even in the presence of bugs, do take special note that
   `transaction send` will permanently change your state.
 * It ia advisable to trial testnet operations (depending on testnet availability),
   prior to completing mainnet operations.
