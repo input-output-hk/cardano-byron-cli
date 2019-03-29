@@ -30,6 +30,11 @@ pub fn command_address(mut term: Term, address: String) {
     };
 
     term.success("Cardano Extended Address\n").unwrap();
+    term.info(&format!(
+        "  - network magic:      {:?}\n",
+        address.attributes.network_magic
+    ))
+    .unwrap();
     term.info(&format!("  - address hash:       {}\n", address.addr))
         .unwrap();
     term.info(&format!("  - address type:       {}\n", address.addr_type))
