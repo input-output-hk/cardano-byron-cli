@@ -268,7 +268,7 @@ There are 2 methods to add inputs to a given transaction, either add it manually
 cardano-cli wallet utxos ${MY_WALLET_ALIAS}
 
 # then add you inputs as follow:
-cardano-cli transaction ${STAGING_ID} ${TxId} ${Index}
+cardano-cli transaction add-input ${STAGING_ID} ${TxId} ${Index}
 ```
 
 or use the ready to use input select:
