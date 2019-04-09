@@ -5,6 +5,8 @@ extern crate dirs;
 extern crate log;
 extern crate env_logger;
 
+#[macro_use]
+extern crate lazy_static;
 extern crate cardano;
 extern crate cardano_storage;
 extern crate cbor_event;
