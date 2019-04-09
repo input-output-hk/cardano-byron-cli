@@ -36,6 +36,7 @@ exe-common      = { path = "cardano-deps/exe-common" }
 cardano-storage = { path = "cardano-deps/storage" }
 storage-units   = { path = "cardano-deps/storage-units" }
 base64 = "0.9"
+lazy_static = "1.3"
 
 [dependencies.clap]
 version = "2.32"

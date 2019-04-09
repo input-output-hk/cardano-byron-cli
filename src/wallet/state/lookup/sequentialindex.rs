@@ -9,7 +9,16 @@ use std::collections::BTreeMap;
 use super::super::utxo::UTxO;
 use super::{Address, AddressLookup, AddressLookupError};
 
-pub const DEFAULT_GAP_LIMIT: u32 = 20;
+lazy_static! {
+    pub static ref DEFAULT_GAP_LIMIT: u32 = {
+        std::env::var("BIP44_DEFAULT_GAP_LIMIT")
+            .map(|s| {
+                s.parse::<u32>()
+                    .expect("BIP44_DEFAULT_GAP_LIMIT is not a valid integer")
+            })
+            .unwrap_or(20)
+    };
+}
 
 type Result<T> = std::result::Result<T, AddressLookupError>;
 
@@ -42,7 +51,7 @@ impl SequentialBip44Lookup {
             wallet: wallet,
             expected: BTreeMap::new(),
             accounts: Vec::new(),
-            gap_limit: DEFAULT_GAP_LIMIT,
+            gap_limit: *DEFAULT_GAP_LIMIT,
             network_magic: network_magic,
         }
     }
