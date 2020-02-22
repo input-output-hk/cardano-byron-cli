@@ -158,3 +158,10 @@ pub fn xprv_to_xpub(input_priv: &str, output_pub: &str) {
     file.write_all(s.as_ref()).unwrap();
     ()
 }
+
+pub fn chain_state_dump(storage: &std::path::Path) {
+    /*
+        use cardano_storage::
+        cardano
+    */
+}

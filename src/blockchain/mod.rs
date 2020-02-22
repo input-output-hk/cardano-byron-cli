@@ -18,7 +18,7 @@ use cardano_storage::{self as storage, config::StorageConfig, tag, Storage};
 use exe_common::network::api::BlockRef;
 pub use exe_common::{
     config::net::{self, Config, Peer, Peers},
-    genesis_data, genesisdata, network,
+    genesisdata, network,
 };
 use storage_units::utils::directory_name::{DirectoryName, DirectoryNameError};
 
@@ -105,7 +105,7 @@ impl Blockchain {
 
     fn init_genesis_data(&self) -> Result<()> {
         use std::{fs::OpenOptions, io::Write};
-        let genesis_data = genesis_data::get_genesis_data(&self.config.genesis_prev)
+        let genesis_data = genesisdata::data::get_genesis_data(&self.config.genesis_prev)
             .map_err(Error::VerifyChainGenesisHashNotFound)?;
 
         let path = self.dir.join("genesis.json");

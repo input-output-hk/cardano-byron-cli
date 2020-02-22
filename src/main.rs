@@ -1324,6 +1324,11 @@ fn subcommand_debug<'a>(mut term: term::Term, _rootdir: PathBuf, matches: &ArgMa
             let xpub_out = matches.value_of("OUTPUT_FILE").expect("OUTPUT_FILE");
             debug::xprv_to_xpub(xprv_in, xpub_out);
         }
+        ("chain-state-dump", Some(_matches)) => {
+            ()
+            //let storage_path = matches.value_of("STORAGE-PATH").expect("INPUT_FILE");
+            //debug::chain_state_dump(storage_path);
+        }
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
