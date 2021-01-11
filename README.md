@@ -1,4 +1,9 @@
+**Deprecated Note:**
+
+This repository implements supports for Cardano Byron, and will not be updated to works on Cardano Shelley and further.
+
 # cardano-cli
+
 
 [![Build Status](https://travis-ci.org/input-output-hk/cardano-cli.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-cli)
 ![MIT or APACHE-2 licensed](https://img.shields.io/badge/licensed-MIT%20or%20APACHE--2-blue.svg)
