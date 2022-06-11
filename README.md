@@ -1,15 +1,8 @@
 **Deprecated Note:**
 
-This repository implements supports for Cardano Byron, and will not be updated to works on Cardano Shelley and further.
+⚠️ This project is deprecated, and only supports the first version of cardano (Byron). do not use anymore, it is here for historical purpose.
 
 # cardano-cli
-
-
-[![Build Status](https://travis-ci.org/input-output-hk/cardano-cli.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-cli)
-![MIT or APACHE-2 licensed](https://img.shields.io/badge/licensed-MIT%20or%20APACHE--2-blue.svg)
-![Cardano Mainnet](https://img.shields.io/badge/Cardano%20Ada-mainnet-brightgreen.svg)
-![Cardano Staging](https://img.shields.io/badge/Cardano%20Ada-staging-brightgreen.svg)
-![Cardano Staging](https://img.shields.io/badge/Cardano%20Ada-testnet-orange.svg)
 
 The [Cardano](https://www.cardano.org) command line interface provides the following features:
 
